@@ -60,7 +60,7 @@ static int op_RET(c8_t *ctx, uint16_t opcode)
  */
 static int op_JP_addr(c8_t *ctx, uint16_t opcode)
 {
-    uint16_t value = opcode & 0xfff;
+    uint16_t value = opcode & 0xFFF;
 
     ctx->reg.pc = value;
     snprintf(ctx->last.opstr, OPSTRLEN, "JP\t0x%03X", value);
@@ -77,7 +77,7 @@ static int op_JP_addr(c8_t *ctx, uint16_t opcode)
  */
 static int op_CALL_addr(c8_t *ctx, uint16_t opcode)
 {
-    uint16_t value = opcode & 0xfff;
+    uint16_t value = opcode & 0xFFF;
 
     ctx->stack[ctx->reg.sp] = ctx->reg.pc;
     ctx->reg.sp++;
@@ -95,8 +95,8 @@ static int op_SE_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg, value;
 
-    reg = (opcode >> 8) & 0xf;
-    value = opcode & 0xff;
+    reg = (opcode >> 8) & 0xF;
+    value = opcode & 0xFF;
 
     if (ctx->reg.v[reg] == value)
         ctx->reg.pc += 2;
@@ -113,8 +113,8 @@ static int op_SNE_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg, value;
 
-    reg = (opcode >> 8) & 0xf;
-    value = opcode & 0xff;
+    reg = (opcode >> 8) & 0xF;
+    value = opcode & 0xFF;
 
     if (ctx->reg.v[reg] != value)
         ctx->reg.pc += 2;
@@ -131,8 +131,8 @@ static int op_SE_Vx_Vy(c8_t *ctx, uint16_t opcode)
 {
     uint8_t regX, regY;
 
-    regX = (opcode >> 8) & 0xf;
-    regY = (opcode >> 4) & 0xf;
+    regX = (opcode >> 8) & 0xF;
+    regY = (opcode >> 4) & 0xF;
 
     if (ctx->reg.v[regX] == ctx->reg.v[regY])
         ctx->reg.pc += 2;
@@ -149,8 +149,8 @@ static int op_LD_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg, value;
 
-    reg = (opcode >> 8) & 0xf;
-    value = opcode & 0xff;
+    reg = (opcode >> 8) & 0xF;
+    value = opcode & 0xFF;
 
     ctx->reg.v[reg] = value;
     snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\t0x%02X", reg, value);
@@ -166,8 +166,8 @@ static int op_ADD_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg, value;
 
-    reg = (opcode >> 8) & 0xf;
-    value = opcode & 0xff;
+    reg = (opcode >> 8) & 0xF;
+    value = opcode & 0xFF;
 
     ctx->reg.v[reg] += value;
     snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\t0x%02X", reg, value);
@@ -309,8 +309,8 @@ static int op_SNE_Vx_Vy(c8_t *ctx, uint16_t opcode)
 {
     uint8_t regX, regY;
 
-    regX = (opcode >> 8) & 0xf;
-    regY = (opcode >> 4) & 0xf;
+    regX = (opcode >> 8) & 0xF;
+    regY = (opcode >> 4) & 0xF;
 
     if (ctx->reg.v[regX] != ctx->reg.v[regY])
         ctx->reg.pc += 2;
@@ -325,7 +325,7 @@ static int op_SNE_Vx_Vy(c8_t *ctx, uint16_t opcode)
  */
 static int op_LD_I_addr(c8_t *ctx, uint16_t opcode)
 {
-    uint16_t value = opcode & 0xfff;
+    uint16_t value = opcode & 0xFFF;
 
     ctx->reg.i = value;
     snprintf(ctx->last.opstr, OPSTRLEN, "LD\tI,\t0x%03X", value);
@@ -339,7 +339,7 @@ static int op_LD_I_addr(c8_t *ctx, uint16_t opcode)
  */
 static int op_JP_V0_addr(c8_t *ctx, uint16_t opcode)
 {
-    uint16_t value = opcode & 0xfff;
+    uint16_t value = opcode & 0xFFF;
 
     ctx->reg.pc = ctx->reg.v[0] + value;
     snprintf(ctx->last.opstr, OPSTRLEN, "JP\tV0,\t0x%03X", value);
@@ -372,7 +372,7 @@ int c8_step(c8_t *ctx)
     ctx->last.pc = pc;
     ctx->last.opstr[0] = '\0';
 
-    switch (opcode & 0xf000)
+    switch (opcode & 0xF000)
     {
         case 0x0000:
         {
