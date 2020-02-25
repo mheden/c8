@@ -51,6 +51,60 @@ static int handle_1xxx(c8_t *ctx, uint16_t opcode)
 }
 
 /**
+ * 3xkk - SE Vx, byte
+ * Skip next instruction if Vx = kk.
+ */
+static int handle_SE_Vx_byte(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg, value;
+
+    reg = (opcode >> 8) & 0xf;
+    value = opcode & 0xff;
+
+    if (ctx->reg.v[reg] == value)
+        ctx->reg.pc += 2;
+    snprintf(ctx->last.opstr, OPSTRLEN, "SE\tV%X,\t0x%02X", reg, value);
+
+    return ERR_OK;
+}
+
+/**
+ * 4xkk - SNE Vx, byte
+ * Skip next instruction if Vx != kk.
+ */
+static int handle_SNE_Vx_byte(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg, value;
+
+    reg = (opcode >> 8) & 0xf;
+    value = opcode & 0xff;
+
+    if (ctx->reg.v[reg] != value)
+        ctx->reg.pc += 2;
+    snprintf(ctx->last.opstr, OPSTRLEN, "SNE\tV%X,\t0x%02X", reg, value);
+
+    return ERR_OK;
+}
+
+/**
+ * 5xy0 - SE Vx, Vy
+ * Skip next instruction if Vx = Vy.
+ */
+static int handle_SE_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t regX, regY;
+
+    regX = (opcode >> 8) & 0xf;
+    regY = (opcode >> 4) & 0xf;
+
+    if (ctx->reg.v[regX] == ctx->reg.v[regY])
+        ctx->reg.pc += 2;
+    snprintf(ctx->last.opstr, OPSTRLEN, "SE\tV%X,\tV%X", regX, regY);
+
+    return ERR_OK;
+}
+
+/**
  * 6xkk - LD Vx, byte
  * Set Vx = kk.
  */
@@ -80,6 +134,24 @@ static int handle_7xxx(c8_t *ctx, uint16_t opcode)
 
     ctx->reg.v[reg] += value;
     snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\t0x%02X", reg, value);
+
+    return ERR_OK;
+}
+
+/**
+ * 9xy0 - SNE Vx, Vy
+ * Skip next instruction if Vx != Vy.
+ */
+static int handle_SNE_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t regX, regY;
+
+    regX = (opcode >> 8) & 0xf;
+    regY = (opcode >> 4) & 0xf;
+
+    if (ctx->reg.v[regX] != ctx->reg.v[regY])
+        ctx->reg.pc += 2;
+    snprintf(ctx->last.opstr, OPSTRLEN, "SNE\tV%X,\tV%X", regX, regY);
 
     return ERR_OK;
 }
@@ -146,6 +218,21 @@ int c8_step(c8_t *ctx)
                 ret = ERR_INFINIT_LOOP;
             break;
         }
+        case 0x3000:
+        {
+            ret = handle_SE_Vx_byte(ctx, opcode);
+            break;
+        }
+        case 0x4000:
+        {
+            ret = handle_SNE_Vx_byte(ctx, opcode);
+            break;
+        }
+        case 0x5000:
+        {
+            ret = handle_SE_Vx_Vy(ctx, opcode);
+            break;
+        }
         case 0x6000:
         {
             ret = handle_6xxx(ctx, opcode);
@@ -154,6 +241,11 @@ int c8_step(c8_t *ctx)
         case 0x7000:
         {
             ret = handle_7xxx(ctx, opcode);
+            break;
+        }
+        case 0x9000:
+        {
+            ret = handle_SNE_Vx_Vy(ctx, opcode);
             break;
         }
         case 0xA000:
@@ -168,6 +260,7 @@ int c8_step(c8_t *ctx)
         }
     }
 
+    ctx->flags = FLAG_TRACE;
     if (ctx->flags & FLAG_TRACE)
         fprintf(stderr, "%03x:\t%04x\t;\t%s\n", ctx->last.pc, ctx->last.op,
                 ctx->last.opstr);

@@ -70,6 +70,63 @@ static void test_op_1xxx()
 }
 
 
+void test_op_skip()
+{
+    c8_t *ctx;
+    uint8_t code[] = {
+            0x62, 0x10, //  000: LD V2, 0x10
+            0x32, 0xab, //  002: SE V2, 0xab
+            0x32, 0x10, //  004: SE V2, 0x10
+            0x00, 0x00, //  006: should not be executed
+            0x42, 0xab, //  008: SNE V2, 0xab
+            0x00, 0x00, //  010: should not be executed
+            0x42, 0x10, //  012: SNE V2, 0x10
+
+            0x62, 0x10, //  014: LD V2, 0x10
+            0x63, 0xab, //  016: LD V3, 0xab
+            0x52, 0x30, //  018: SE V2, V3
+            0x63, 0x10, //  020: LD V3, 0x10
+            0x52, 0x30, //  022: SE V2, V3
+            0x00, 0x00, //  024: should not be executed
+            0x63, 0xab, //  026: LD V3, 0xab
+            0x92, 0x30, //  028: SNE V2, V3
+            0x00, 0x00, //  030: should not be executed
+            0x63, 0x10, //  032: LD V3, 0x10
+            0x92, 0x30, //  034: SNE V2, V3
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(4, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(8, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(12, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(14, ctx->reg.pc);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(20, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(26, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(32, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(34, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(36, ctx->reg.pc);
+
+    TEST_ASSERT_EQUAL_STRING("SNE\tV2,\tV3", ctx->last.opstr);
+}
+
 static void test_op_6xxx()
 {
     c8_t *ctx;
@@ -181,6 +238,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_load);
     RUN_TEST(test_op_invalid);
     RUN_TEST(test_op_1xxx);
+    RUN_TEST(test_op_skip);
     RUN_TEST(test_op_6xxx);
     RUN_TEST(test_op_7xxx);
     RUN_TEST(test_op_Axxx);
