@@ -229,6 +229,51 @@ void test_op_JP_V0_addr()
 }
 
 
+static void test_op_subroutine()
+{
+    c8_t *ctx;
+    uint8_t code[] = {
+            0x61, 0x10, // 000: LD V1, 0x10
+            0x20, 0x06, // 002: CALL 0x006
+            0x00, 0x00, // 004: space
+            0x20, 0x0a, // 006: CALL 0x00a
+            0x00, 0xee, // 008: RET
+            0x61, 0x77, // 010: LD V1, 0x77
+            0x00, 0xee, // 012: RET
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(6, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(1, ctx->reg.sp);
+    TEST_ASSERT_EQUAL(4, ctx->stack[0]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(10, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(2, ctx->reg.sp);
+    TEST_ASSERT_EQUAL(4, ctx->stack[0]);
+    TEST_ASSERT_EQUAL(8, ctx->stack[1]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(12, ctx->reg.pc);
+    TEST_ASSERT_EQUAL_HEX8(0x77, ctx->reg.v[1]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(8, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(1, ctx->reg.sp);
+    TEST_ASSERT_EQUAL(4, ctx->stack[0]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(4, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(0, ctx->reg.sp);
+
+    TEST_ASSERT_EQUAL_STRING("RET", ctx->last.opstr);
+}
+
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -243,6 +288,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_op_ADD_Vx_byte);
     RUN_TEST(test_op_LD_I_addr);
     RUN_TEST(test_op_JP_V0_addr);
+    RUN_TEST(test_op_subroutine);
     UnityEnd();
 
     return 0;

@@ -37,6 +37,24 @@ struct c8
 };
 
 /**
+ * 00EE - RET
+ * Return from a subroutine.
+ *
+ * The interpreter sets the program counter to the address at the top of the
+ * stack, then subtracts 1 from the stack pointer.
+ */
+static int op_RET(c8_t *ctx, uint16_t opcode)
+{
+    (void)opcode;
+
+    ctx->reg.sp--;
+    ctx->reg.pc = ctx->stack[ctx->reg.sp];
+    snprintf(ctx->last.opstr, OPSTRLEN, "RET");
+
+    return ERR_OK;
+}
+
+/**
  * 1nnn - JP addr
  * Jump to location nnn.
  */
@@ -46,6 +64,25 @@ static int op_JP_addr(c8_t *ctx, uint16_t opcode)
 
     ctx->reg.pc = value;
     snprintf(ctx->last.opstr, OPSTRLEN, "JP\t0x%03X", value);
+
+    return ERR_OK;
+}
+
+/**
+ * 2nnn - CALL addr
+ * Call subroutine at nnn.
+ *
+ * The interpreter increments the stack pointer, then puts the current PC on
+ * the top of the stack. The PC is then set to nnn.
+ */
+static int op_CALL_addr(c8_t *ctx, uint16_t opcode)
+{
+    uint16_t value = opcode & 0xfff;
+
+    ctx->stack[ctx->reg.sp] = ctx->reg.pc;
+    ctx->reg.sp++;
+    ctx->reg.pc = value;
+    snprintf(ctx->last.opstr, OPSTRLEN, "CALL\t0x%03X", value);
 
     return ERR_OK;
 }
@@ -211,11 +248,24 @@ int c8_step(c8_t *ctx)
 
     switch (opcode & 0xf000)
     {
+        case 0x0000:
+        {
+            if (opcode == 0x00EE)
+            {
+                ret = op_RET(ctx, opcode);
+            }
+            break;
+        }
         case 0x1000:
         {
             ret = op_JP_addr(ctx, opcode);
             if (ctx->reg.pc == ctx->last.pc)
                 ret = ERR_INFINIT_LOOP;
+            break;
+        }
+        case 0x2000:
+        {
+            ret = op_CALL_addr(ctx, opcode);
             break;
         }
         case 0x3000:
