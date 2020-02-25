@@ -7,10 +7,10 @@
 extern "C" {
 #endif
 
-#define ERR_OK               0
-#define ERR_INVALID_OP      -1
-#define ERR_INFINIT_LOOP    -2
-#define ERR_OUT_OF_MEM      -3
+#define ERR_OK 0
+#define ERR_INVALID_OP -1
+#define ERR_INFINIT_LOOP -2
+#define ERR_OUT_OF_MEM -3
 
 typedef struct c8 c8_t;
 
@@ -63,6 +63,17 @@ int c8_redraw_needed(c8_t *ctx);
  */
 void c8_redraw_ack(c8_t *ctx);
 
+/**
+ *
+ *
+ */
+void c8_debug_dump_memory(c8_t *ctx);
+
+/**
+ *
+ *
+ */
+void c8_debug_dump_state(c8_t *ctx);
 
 #ifdef __cplusplus
 }

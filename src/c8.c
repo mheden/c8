@@ -162,3 +162,43 @@ int c8_load(c8_t *ctx, uint16_t address, uint8_t *data, uint16_t size)
     memcpy(&ctx->mem[address], data, size);
     return ERR_OK;
 }
+
+void c8_debug_dump_memory(c8_t *ctx)
+{
+    int row, col;
+    uint8_t *memptr = ctx->mem;
+
+    for (row = 0; row < 128; row++)
+    {
+        fprintf(stderr, "%03x:", row * col);
+        for (col = 0; col < 32; col++)
+        {
+            fprintf(stderr, " %02x", *memptr++);
+        }
+        fprintf(stderr, "\n");
+    }
+}
+
+void c8_debug_dump_state(c8_t *ctx)
+{
+    int i;
+
+    fprintf(stderr, "regs: ");
+    for (i = 0; i < 8; i++)
+    {
+        fprintf(stderr, "V%X=%02X ", i, ctx->reg.v[i]);
+    }
+    fprintf(stderr, "\n      ");
+    for (i = 8; i < 16; i++)
+    {
+        fprintf(stderr, "V%X=%02X ", i, ctx->reg.v[i]);
+    }
+
+    fprintf(stderr, "\n      I=%03X PC=%03X SP=%03x\nstack:", ctx->reg.i,
+            ctx->reg.pc, ctx->reg.sp);
+    for (i = 0; i < ctx->reg.sp; i++)
+    {
+        fprintf(stderr, " %03X", ctx->stack[i]);
+    }
+    fprintf(stderr, "\n");
+}
