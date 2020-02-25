@@ -29,6 +29,22 @@ static void test_load()
 }
 
 
+static void test_instruction_invalid()
+{
+    c8_t *ctx;
+    uint8_t code[] = {
+            0x00,
+            0x00,
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_INVALID_OP, c8_step(ctx));
+}
+
+
 static void test_instruction_6xxx()
 {
     c8_t *ctx;
@@ -63,6 +79,7 @@ int main(int argc, char **argv)
 
     UnityBegin("c8 test suite");
     RUN_TEST(test_load);
+    RUN_TEST(test_instruction_invalid);
     RUN_TEST(test_instruction_6xxx);
     UnityEnd();
 
