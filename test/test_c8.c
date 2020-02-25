@@ -29,7 +29,7 @@ static void test_load()
 }
 
 
-static void test_instruction_invalid()
+static void test_op_invalid()
 {
     c8_t *ctx;
     uint8_t code[] = {
@@ -45,7 +45,7 @@ static void test_instruction_invalid()
 }
 
 
-static void test_instruction_6xxx()
+static void test_op_6xxx()
 {
     c8_t *ctx;
     uint8_t code[] = {
@@ -79,8 +79,8 @@ int main(int argc, char **argv)
 
     UnityBegin("c8 test suite");
     RUN_TEST(test_load);
-    RUN_TEST(test_instruction_invalid);
-    RUN_TEST(test_instruction_6xxx);
+    RUN_TEST(test_op_invalid);
+    RUN_TEST(test_op_6xxx);
     UnityEnd();
 
     return 0;
