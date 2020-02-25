@@ -418,7 +418,48 @@ void test_op_OP_Vx_Vy()
     TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
     TEST_ASSERT_EQUAL_HEX8(0x0e, ctx->reg.v[0]);
     TEST_ASSERT_EQUAL_HEX8(1, ctx->reg.v[0xf]);
+
+    TEST_ASSERT_EQUAL_STRING("SHL\tV0,\tV1", ctx->last.opstr);
 }
+
+void test_timers()
+{
+    c8_t *ctx;
+    uint8_t code[] = {
+            0x60, 0x78, // LD V0, 0x78
+            0x61, 0x04, // LD V1, 0x04
+            0xF0, 0x15, // LD DT, V0
+            0xF1, 0x18, // LD ST, V1
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+
+    TEST_ASSERT_EQUAL(0, ctx->reg.sound_timer);
+    TEST_ASSERT_EQUAL(0, ctx->reg.delay_timer);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+
+    TEST_ASSERT_EQUAL(0x78, ctx->reg.delay_timer);
+    TEST_ASSERT_EQUAL(0x04, ctx->reg.sound_timer);
+
+    TEST_ASSERT_EQUAL(ERR_SOUND_ON, c8_tick_60hz(ctx));
+    TEST_ASSERT_EQUAL(ERR_SOUND_ON, c8_tick_60hz(ctx));
+    TEST_ASSERT_EQUAL(ERR_SOUND_ON, c8_tick_60hz(ctx));
+
+    TEST_ASSERT_EQUAL(0x75, ctx->reg.delay_timer);
+    TEST_ASSERT_EQUAL(0x01, ctx->reg.sound_timer);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_tick_60hz(ctx));
+
+    TEST_ASSERT_EQUAL_STRING("LD\tST,\tV1", ctx->last.opstr);
+}
+
 
 int main(int argc, char **argv)
 {
@@ -436,6 +477,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_op_JP_V0_addr);
     RUN_TEST(test_op_subroutine);
     RUN_TEST(test_op_OP_Vx_Vy);
+    RUN_TEST(test_timers);
     UnityEnd();
 
     return 0;

@@ -7,6 +7,7 @@
 extern "C" {
 #endif
 
+#define ERR_SOUND_ON 1
 #define ERR_OK 0
 #define ERR_INVALID_OP -1
 #define ERR_INFINIT_LOOP -2

@@ -238,9 +238,9 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
              * 8xy4 - ADD Vx, Vy
              * Set Vx = Vx + Vy, set VF = carry.
              */
-            ctx->reg.v[0xF] = (uint16_t)ctx->reg.v[regX]
-                                         + (uint16_t)ctx->reg.v[regY]
-                                 > 0xFF;
+            ctx->reg.v[0xF] =
+                    (uint16_t)ctx->reg.v[regX] + (uint16_t)ctx->reg.v[regY]
+                    > 0xFF;
             ctx->reg.v[regX] += ctx->reg.v[regY];
             snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\tV%X", regX, regY);
             ret = ERR_OK;
@@ -347,6 +347,107 @@ static int op_JP_V0_addr(c8_t *ctx, uint16_t opcode)
     return ERR_OK;
 }
 
+/**
+ * Misc instructions under 0xFnnn
+ */
+static int op_Fxxx(c8_t *ctx, uint16_t opcode)
+{
+    int ret = ERR_OK;
+    uint8_t reg = (opcode >> 8) & 0xF;
+
+    switch (opcode & 0xFF)
+    {
+        case 0x07:
+        {
+            /* LD Vx, DT */
+            ctx->reg.v[reg] = ctx->reg.delay_timer;
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\tDT", reg);
+            ret = ERR_OK;
+            break;
+        }
+        // case 0x0A:
+        // {
+        /* LD Vx, K */
+        /* TODO: */
+        // break;
+        // }
+        case 0x15:
+        {
+            /* LD DT, Vx */
+            ctx->reg.delay_timer = ctx->reg.v[reg];
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tDT,\tV%X", reg);
+            ret = ERR_OK;
+            break;
+        }
+        case 0x18:
+        {
+            /* LD ST, Vx */
+            ctx->reg.sound_timer = ctx->reg.v[reg];
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tST,\tV%X", reg);
+            ret = ERR_OK;
+            break;
+        }
+        case 0x1E:
+        {
+            /* ADD I, Vx */
+            ctx->reg.v[0xF] =
+                    ((uint32_t)ctx->reg.i + (uint32_t)ctx->reg.v[reg]) > 0xFFF;
+            ctx->reg.i = ctx->reg.i + ctx->reg.v[reg];
+            snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tI,\tV%X", reg);
+            ret = ERR_OK;
+            break;
+        }
+        case 0x29:
+        {
+            /* LD I, FONT(Vx) */
+            ctx->reg.i = ctx->reg.v[reg] * 5;
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tI,\tFONT(V%X)", reg);
+            ret = ERR_OK;
+            break;
+        }
+        case 0x33:
+        {
+            /* LD B, Vx */
+            uint16_t i = ctx->reg.i;
+            ctx->mem[i + 0] = (ctx->reg.v[reg] / 100) % 10;
+            ctx->mem[i + 1] = (ctx->reg.v[reg] / 10) % 10;
+            ctx->mem[i + 2] = ctx->reg.v[reg] % 10;
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tB,\tV%X", reg);
+            ret = ERR_OK;
+            break;
+        }
+        case 0x55:
+        {
+            /* LD [I], Vx */
+            uint8_t i;
+            uint8_t to_reg = (opcode >> 8) & 0xF;
+            for (i = 0; i <= to_reg; i++)
+            {
+                ctx->mem[ctx->reg.i++] = ctx->reg.v[i];
+            }
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\t[I],\tV%X", to_reg);
+            ret = ERR_OK;
+            break;
+        }
+        case 0x65:
+        {
+            /* LD Vx, [I] */
+            uint8_t i;
+            uint8_t to_reg = (opcode >> 8) & 0xF;
+            for (i = 0; i <= to_reg; i++)
+            {
+                ctx->reg.v[i] = ctx->mem[ctx->reg.i++];
+            }
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\t[I]", to_reg);
+            ret = ERR_OK;
+            break;
+        }
+        default:
+            ret = ERR_INVALID_OP;
+    }
+    return ret;
+}
+
 c8_t *c8_create(void)
 {
     c8_t *ctx;
@@ -441,12 +542,30 @@ int c8_step(c8_t *ctx)
             ret = op_JP_V0_addr(ctx, opcode);
             break;
         }
+        case 0xF000:
+        {
+            ret = op_Fxxx(ctx, opcode);
+            break;
+        }
     }
 
     ctx->flags = FLAG_TRACE;
     if (ctx->flags & FLAG_TRACE)
         fprintf(stderr, "%03x:\t%04x\t;\t%s\n", ctx->last.pc, ctx->last.op,
                 ctx->last.opstr);
+
+    return ret;
+}
+
+int c8_tick_60hz(c8_t *ctx)
+{
+    int ret = ERR_OK;
+    if (ctx->reg.delay_timer > 0)
+        ctx->reg.delay_timer--;
+    if (ctx->reg.sound_timer > 0)
+        ctx->reg.sound_timer--;
+    if (ctx->reg.sound_timer > 0)
+        ret = ERR_SOUND_ON;
 
     return ret;
 }
@@ -496,6 +615,8 @@ void c8_debug_dump_state(c8_t *ctx)
         fprintf(stderr, "V%X=%02X ", i, ctx->reg.v[i]);
     }
 
+    fprintf(stderr, "\n      ST=%02X DT=%02X", ctx->reg.sound_timer,
+            ctx->reg.delay_timer);
     fprintf(stderr, "\n      I=%03X PC=%03X SP=%02x\nstack:", ctx->reg.i,
             ctx->reg.pc, ctx->reg.sp);
     for (i = 0; i < ctx->reg.sp; i++)
