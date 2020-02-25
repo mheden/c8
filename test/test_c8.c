@@ -29,6 +29,33 @@ static void test_load()
 }
 
 
+static void test_instruction_6xxx()
+{
+    c8_t *ctx;
+    uint8_t code[] = {
+            0x64, 0xab, // LD V4, 0xab
+            0x60, 0x51, // LD V0, 0x51
+            0x6b, 0x12, // LD VB, 0x12
+            0x6e, 0x36, // LD VE, 0x36
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+
+    TEST_ASSERT_EQUAL(8, ctx->reg.pc);
+    TEST_ASSERT_EQUAL_HEX8(0xab, ctx->reg.v[4]);
+    TEST_ASSERT_EQUAL_HEX8(0x51, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x12, ctx->reg.v[0xb]);
+    TEST_ASSERT_EQUAL_HEX8(0x36, ctx->reg.v[0xe]);
+}
+
+
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -36,6 +63,7 @@ int main(int argc, char **argv)
 
     UnityBegin("c8 test suite");
     RUN_TEST(test_load);
+    RUN_TEST(test_instruction_6xxx);
     UnityEnd();
 
     return 0;

@@ -32,6 +32,22 @@ struct c8
     uint16_t keys;
 };
 
+/**
+ * 6xkk - LD Vx, byte
+ * Set Vx = kk.
+*/
+static int handle_6xxx(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg, value;
+
+    reg = (opcode >> 8) & 0xf;
+    value = opcode & 0xff;
+
+    ctx->reg.v[reg] = value;
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\t0x%02X", reg, value);
+
+    return ERR_OK;
+}
 
 c8_t *c8_create(void)
 {
@@ -45,8 +61,28 @@ c8_t *c8_create(void)
 
 int c8_step(c8_t *ctx)
 {
-    (void)ctx;
-    return ERR_OK;
+    int ret = ERR_INVALID_OP;
+    uint16_t opcode;
+    uint16_t pc;
+
+    /* fetch, decode and execute OP code */
+    pc = ctx->reg.pc;
+    opcode = (ctx->mem[pc] << 8) | (ctx->mem[pc + 1]);
+    ctx->reg.pc += 2;
+
+    ctx->last.op = opcode;
+    ctx->last.pc = pc;
+
+    switch (opcode & 0xf000)
+    {
+        case 0x6000:
+        {
+            ret = handle_6xxx(ctx, opcode);
+            break;
+        }
+    }
+
+    return ret;
 }
 
 int c8_load(c8_t *ctx, uint16_t address, uint8_t *data, uint16_t size)
