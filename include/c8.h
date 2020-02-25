@@ -10,6 +10,7 @@ extern "C" {
 #define ERR_OK               0
 #define ERR_INVALID_OP      -1
 #define ERR_INFINIT_LOOP    -2
+#define ERR_OUT_OF_MEM      -3
 
 typedef struct c8 c8_t;
 
