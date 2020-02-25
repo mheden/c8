@@ -35,7 +35,7 @@ struct c8
 /**
  * 6xkk - LD Vx, byte
  * Set Vx = kk.
-*/
+ */
 static int handle_6xxx(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg, value;
@@ -45,6 +45,23 @@ static int handle_6xxx(c8_t *ctx, uint16_t opcode)
 
     ctx->reg.v[reg] = value;
     snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\t0x%02X", reg, value);
+
+    return ERR_OK;
+}
+
+/*
+ * 7xkk - ADD Vx, byte
+ * Set Vx = Vx + kk.
+ */
+static int handle_7xxx(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg, value;
+
+    reg = (opcode >> 8) & 0xf;
+    value = opcode & 0xff;
+
+    ctx->reg.v[reg] += value;
+    snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\t0x%02X", reg, value);
 
     return ERR_OK;
 }
@@ -78,6 +95,11 @@ int c8_step(c8_t *ctx)
         case 0x6000:
         {
             ret = handle_6xxx(ctx, opcode);
+            break;
+        }
+        case 0x7000:
+        {
+            ret = handle_7xxx(ctx, opcode);
             break;
         }
     }

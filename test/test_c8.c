@@ -74,6 +74,34 @@ static void test_op_6xxx()
 }
 
 
+void test_op_7xxx()
+{
+    c8_t *ctx;
+
+    uint8_t code[] = {
+            0x64, 0x19, // LD V4, 0x19
+            0x62, 0xf0, // LD V2, 0xf0
+            0x74, 0x13, // ADD V4, 0x13
+            0x72, 0x99, // ADD V2, 0x99
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+
+    TEST_ASSERT_EQUAL(8, ctx->reg.pc);
+    TEST_ASSERT_EQUAL_HEX8(0x2c, ctx->reg.v[4]);
+    TEST_ASSERT_EQUAL_HEX8(0x89, ctx->reg.v[2]);
+
+    TEST_ASSERT_EQUAL_STRING("ADD\tV2,\t0x99", ctx->last.opstr);
+}
+
+
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -83,6 +111,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_load);
     RUN_TEST(test_op_invalid);
     RUN_TEST(test_op_6xxx);
+    RUN_TEST(test_op_7xxx);
     UnityEnd();
 
     return 0;
