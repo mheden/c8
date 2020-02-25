@@ -49,7 +49,7 @@ static int handle_6xxx(c8_t *ctx, uint16_t opcode)
     return ERR_OK;
 }
 
-/*
+/**
  * 7xkk - ADD Vx, byte
  * Set Vx = Vx + kk.
  */
@@ -62,6 +62,20 @@ static int handle_7xxx(c8_t *ctx, uint16_t opcode)
 
     ctx->reg.v[reg] += value;
     snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\t0x%02X", reg, value);
+
+    return ERR_OK;
+}
+
+/**
+ * Annn - LD I, addr
+ * Set I = nnn.
+ */
+static int handle_Axxx(c8_t *ctx, uint16_t opcode)
+{
+    uint16_t value = opcode & 0xfff;
+
+    ctx->reg.i = value;
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tI,\t0x%03X", value);
 
     return ERR_OK;
 }
@@ -100,6 +114,11 @@ int c8_step(c8_t *ctx)
         case 0x7000:
         {
             ret = handle_7xxx(ctx, opcode);
+            break;
+        }
+        case 0xA000:
+        {
+            ret = handle_Axxx(ctx, opcode);
             break;
         }
     }

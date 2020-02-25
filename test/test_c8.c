@@ -77,7 +77,6 @@ static void test_op_6xxx()
 void test_op_7xxx()
 {
     c8_t *ctx;
-
     uint8_t code[] = {
             0x64, 0x19, // LD V4, 0x19
             0x62, 0xf0, // LD V2, 0xf0
@@ -102,6 +101,31 @@ void test_op_7xxx()
 }
 
 
+void test_op_Axxx()
+{
+    c8_t *ctx;
+    uint8_t code[] = {
+        0xA1, 0x23,      // LD I, 0x123
+        0xA4, 0x56,      // LD I, 0x456
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+
+    TEST_ASSERT_EQUAL(2, ctx->reg.pc);
+    TEST_ASSERT_EQUAL_HEX16(0x123, ctx->reg.i);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+
+    TEST_ASSERT_EQUAL(4, ctx->reg.pc);
+    TEST_ASSERT_EQUAL_HEX16(0x456, ctx->reg.i);
+
+    TEST_ASSERT_EQUAL_STRING("LD\tI,\t0x456", ctx->last.opstr);
+}
+
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -112,6 +136,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_op_invalid);
     RUN_TEST(test_op_6xxx);
     RUN_TEST(test_op_7xxx);
+    RUN_TEST(test_op_Axxx);
     UnityEnd();
 
     return 0;
