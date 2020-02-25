@@ -521,6 +521,37 @@ static void test_op_Fxxx_push_pop()
     }
 }
 
+static void test_op_Fxxx_misc()
+{
+    c8_t *ctx;
+    uint8_t code[] = {
+            0x60, 0x92, // LD V0, 146
+            0x61, 0x23, // LD V1, 35
+            0xa1, 0x00, // LD I, 0x100
+            0xf0, 0x33, // LD B, V0
+            0xa1, 0x03, // LD I, 0x103
+            0xf1, 0x33  // LD B, V1
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+
+    TEST_ASSERT_EQUAL(1, ctx->mem[0x100]);
+    TEST_ASSERT_EQUAL(4, ctx->mem[0x101]);
+    TEST_ASSERT_EQUAL(6, ctx->mem[0x102]);
+    TEST_ASSERT_EQUAL(0, ctx->mem[0x103]);
+    TEST_ASSERT_EQUAL(3, ctx->mem[0x104]);
+    TEST_ASSERT_EQUAL(5, ctx->mem[0x105]);
+}
+
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -539,6 +570,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_op_OP_Vx_Vy);
     RUN_TEST(test_op_Fxxx_timers);
     RUN_TEST(test_op_Fxxx_push_pop);
+    RUN_TEST(test_op_Fxxx_misc);
     UnityEnd();
 
     return 0;
