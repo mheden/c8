@@ -422,7 +422,7 @@ void test_op_OP_Vx_Vy()
     TEST_ASSERT_EQUAL_STRING("SHL\tV0,\tV1", ctx->last.opstr);
 }
 
-void test_timers()
+static void test_op_Fxxx_timers()
 {
     c8_t *ctx;
     uint8_t code[] = {
@@ -460,6 +460,66 @@ void test_timers()
     TEST_ASSERT_EQUAL_STRING("LD\tST,\tV1", ctx->last.opstr);
 }
 
+static void test_op_Fxxx_push_pop()
+{
+    int i;
+    c8_t *ctx;
+    uint8_t code[] = {
+            0x60, 0x01, // LD V0, 0x01
+            0x61, 0x02, // LD V1, 0x02
+            0x62, 0x03, // LD V2, 0x03
+            0x63, 0x04, // LD V3, 0x04
+            0x64, 0x05, // LD V4, 0x05
+            0x65, 0x06, // LD V5, 0x06
+            0x66, 0x07, // LD V6, 0x07
+            0x67, 0x08, // LD V7, 0x08
+            0x68, 0x09, // LD V8, 0x09
+            0x69, 0x0a, // LD V9, 0X0A
+            0x6a, 0x0b, // LD VA, 0X0B
+            0x6b, 0x0c, // LD VB, 0X0C
+            0x6c, 0x0d, // LD VC, 0X0D
+            0x6d, 0x0e, // LD VD, 0X0E
+            0x6e, 0x0f, // LD VE, 0X0F
+            0x6f, 0x10, // LD VF, 0x10
+            0xa1, 0x00, // LD I, 0x100
+            0xff, 0x55, // LD [I], VF
+
+            0x60, 0x00, // LD V0, 0x00
+            0x61, 0x00, // LD V1, 0x00
+            0x62, 0x00, // LD V2, 0x00
+            0x63, 0x00, // LD V3, 0x00
+            0x64, 0x00, // LD V4, 0x00
+            0x65, 0x00, // LD V5, 0x00
+            0x66, 0x00, // LD V6, 0x00
+            0x67, 0x00, // LD V7, 0x00
+            0xa1, 0x00, // LD I, 0x100
+            0xf7, 0x65, // LD V7, [I]
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    for (i = 0; i < 18; i++)
+    {
+        TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    }
+
+    for (i = 0; i < 16; i++)
+    {
+        TEST_ASSERT_EQUAL_HEX8(i + 1, ctx->mem[0x100 + i]);
+    }
+
+    for (i = 0; i < 10; i++)
+    {
+        TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    }
+
+    for (i = 0; i < 16; i++)
+    {
+        TEST_ASSERT_EQUAL_HEX8(i + 1, ctx->reg.v[i]);
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -477,7 +537,8 @@ int main(int argc, char **argv)
     RUN_TEST(test_op_JP_V0_addr);
     RUN_TEST(test_op_subroutine);
     RUN_TEST(test_op_OP_Vx_Vy);
-    RUN_TEST(test_timers);
+    RUN_TEST(test_op_Fxxx_timers);
+    RUN_TEST(test_op_Fxxx_push_pop);
     UnityEnd();
 
     return 0;
