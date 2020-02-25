@@ -8,6 +8,9 @@
 #define HEIGHT 32
 #define OPSTRLEN 15
 
+#define BIT(n) (1 << (n))
+#define FLAG_TRACE BIT(0)
+
 
 struct c8
 {
@@ -27,9 +30,10 @@ struct c8
         char opstr[OPSTRLEN + 1];
     } last;
     uint16_t stack[16];
+    uint16_t keys;
     uint8_t mem[MEM_SIZE];
     uint8_t disp[WIDTH][HEIGHT];
-    uint16_t keys;
+    uint8_t flags;
 };
 
 /**
@@ -80,6 +84,20 @@ static int handle_Axxx(c8_t *ctx, uint16_t opcode)
     return ERR_OK;
 }
 
+/**
+ * Bnnn - JP V0, addr
+ * Jump to location nnn + V0.
+ */
+static int handle_Bxxx(c8_t *ctx, uint16_t opcode)
+{
+    uint16_t value = opcode & 0xfff;
+
+    ctx->reg.pc = ctx->reg.v[0] + value;
+    snprintf(ctx->last.opstr, OPSTRLEN, "JP\tV0,\t0x%03X", value);
+
+    return ERR_OK;
+}
+
 c8_t *c8_create(void)
 {
     c8_t *ctx;
@@ -103,6 +121,7 @@ int c8_step(c8_t *ctx)
 
     ctx->last.op = opcode;
     ctx->last.pc = pc;
+    ctx->last.opstr[0] = '\0';
 
     switch (opcode & 0xf000)
     {
@@ -121,7 +140,16 @@ int c8_step(c8_t *ctx)
             ret = handle_Axxx(ctx, opcode);
             break;
         }
+        case 0xB000:
+        {
+            ret = handle_Bxxx(ctx, opcode);
+            break;
+        }
     }
+
+    if (ctx->flags & FLAG_TRACE)
+        fprintf(stderr, "%03x:\t%04x\t;\t%s\n", ctx->last.pc, ctx->last.op,
+                ctx->last.opstr);
 
     return ret;
 }
