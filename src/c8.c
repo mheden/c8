@@ -40,7 +40,7 @@ struct c8
  * 1nnn - JP addr
  * Jump to location nnn.
  */
-static int handle_1xxx(c8_t *ctx, uint16_t opcode)
+static int op_JP_addr(c8_t *ctx, uint16_t opcode)
 {
     uint16_t value = opcode & 0xfff;
 
@@ -54,7 +54,7 @@ static int handle_1xxx(c8_t *ctx, uint16_t opcode)
  * 3xkk - SE Vx, byte
  * Skip next instruction if Vx = kk.
  */
-static int handle_SE_Vx_byte(c8_t *ctx, uint16_t opcode)
+static int op_SE_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg, value;
 
@@ -72,7 +72,7 @@ static int handle_SE_Vx_byte(c8_t *ctx, uint16_t opcode)
  * 4xkk - SNE Vx, byte
  * Skip next instruction if Vx != kk.
  */
-static int handle_SNE_Vx_byte(c8_t *ctx, uint16_t opcode)
+static int op_SNE_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg, value;
 
@@ -90,7 +90,7 @@ static int handle_SNE_Vx_byte(c8_t *ctx, uint16_t opcode)
  * 5xy0 - SE Vx, Vy
  * Skip next instruction if Vx = Vy.
  */
-static int handle_SE_Vx_Vy(c8_t *ctx, uint16_t opcode)
+static int op_SE_Vx_Vy(c8_t *ctx, uint16_t opcode)
 {
     uint8_t regX, regY;
 
@@ -108,7 +108,7 @@ static int handle_SE_Vx_Vy(c8_t *ctx, uint16_t opcode)
  * 6xkk - LD Vx, byte
  * Set Vx = kk.
  */
-static int handle_6xxx(c8_t *ctx, uint16_t opcode)
+static int op_LD_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg, value;
 
@@ -125,7 +125,7 @@ static int handle_6xxx(c8_t *ctx, uint16_t opcode)
  * 7xkk - ADD Vx, byte
  * Set Vx = Vx + kk.
  */
-static int handle_7xxx(c8_t *ctx, uint16_t opcode)
+static int op_ADD_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg, value;
 
@@ -142,7 +142,7 @@ static int handle_7xxx(c8_t *ctx, uint16_t opcode)
  * 9xy0 - SNE Vx, Vy
  * Skip next instruction if Vx != Vy.
  */
-static int handle_SNE_Vx_Vy(c8_t *ctx, uint16_t opcode)
+static int op_SNE_Vx_Vy(c8_t *ctx, uint16_t opcode)
 {
     uint8_t regX, regY;
 
@@ -160,7 +160,7 @@ static int handle_SNE_Vx_Vy(c8_t *ctx, uint16_t opcode)
  * Annn - LD I, addr
  * Set I = nnn.
  */
-static int handle_Axxx(c8_t *ctx, uint16_t opcode)
+static int op_LD_I_addr(c8_t *ctx, uint16_t opcode)
 {
     uint16_t value = opcode & 0xfff;
 
@@ -174,7 +174,7 @@ static int handle_Axxx(c8_t *ctx, uint16_t opcode)
  * Bnnn - JP V0, addr
  * Jump to location nnn + V0.
  */
-static int handle_Bxxx(c8_t *ctx, uint16_t opcode)
+static int op_JP_V0_addr(c8_t *ctx, uint16_t opcode)
 {
     uint16_t value = opcode & 0xfff;
 
@@ -213,54 +213,55 @@ int c8_step(c8_t *ctx)
     {
         case 0x1000:
         {
-            ret = handle_1xxx(ctx, opcode);
+            ret = op_JP_addr(ctx, opcode);
             if (ctx->reg.pc == ctx->last.pc)
                 ret = ERR_INFINIT_LOOP;
             break;
         }
         case 0x3000:
         {
-            ret = handle_SE_Vx_byte(ctx, opcode);
+            ret = op_SE_Vx_byte(ctx, opcode);
             break;
         }
         case 0x4000:
         {
-            ret = handle_SNE_Vx_byte(ctx, opcode);
+            ret = op_SNE_Vx_byte(ctx, opcode);
             break;
         }
         case 0x5000:
         {
-            ret = handle_SE_Vx_Vy(ctx, opcode);
+            if ((opcode & 0xF) == 0)
+                ret = op_SE_Vx_Vy(ctx, opcode);
             break;
         }
         case 0x6000:
         {
-            ret = handle_6xxx(ctx, opcode);
+            ret = op_LD_Vx_byte(ctx, opcode);
             break;
         }
         case 0x7000:
         {
-            ret = handle_7xxx(ctx, opcode);
+            ret = op_ADD_Vx_byte(ctx, opcode);
             break;
         }
         case 0x9000:
         {
-            ret = handle_SNE_Vx_Vy(ctx, opcode);
+            if ((opcode & 0xF) == 0)
+                ret = op_SNE_Vx_Vy(ctx, opcode);
             break;
         }
         case 0xA000:
         {
-            ret = handle_Axxx(ctx, opcode);
+            ret = op_LD_I_addr(ctx, opcode);
             break;
         }
         case 0xB000:
         {
-            ret = handle_Bxxx(ctx, opcode);
+            ret = op_JP_V0_addr(ctx, opcode);
             break;
         }
     }
 
-    ctx->flags = FLAG_TRACE;
     if (ctx->flags & FLAG_TRACE)
         fprintf(stderr, "%03x:\t%04x\t;\t%s\n", ctx->last.pc, ctx->last.op,
                 ctx->last.opstr);
@@ -313,7 +314,7 @@ void c8_debug_dump_state(c8_t *ctx)
         fprintf(stderr, "V%X=%02X ", i, ctx->reg.v[i]);
     }
 
-    fprintf(stderr, "\n      I=%03X PC=%03X SP=%03x\nstack:", ctx->reg.i,
+    fprintf(stderr, "\n      I=%03X PC=%03X SP=%02x\nstack:", ctx->reg.i,
             ctx->reg.pc, ctx->reg.sp);
     for (i = 0; i < ctx->reg.sp; i++)
     {

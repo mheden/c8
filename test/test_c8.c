@@ -45,7 +45,7 @@ static void test_op_invalid()
 }
 
 
-static void test_op_1xxx()
+static void test_op_JP_addr()
 {
     c8_t *ctx;
     uint8_t code[] = {
@@ -127,7 +127,7 @@ void test_op_skip()
     TEST_ASSERT_EQUAL_STRING("SNE\tV2,\tV3", ctx->last.opstr);
 }
 
-static void test_op_6xxx()
+static void test_op_LD_Vx_byte()
 {
     c8_t *ctx;
     uint8_t code[] = {
@@ -156,7 +156,7 @@ static void test_op_6xxx()
 }
 
 
-void test_op_7xxx()
+void test_op_ADD_Vx_byte()
 {
     c8_t *ctx;
     uint8_t code[] = {
@@ -183,7 +183,7 @@ void test_op_7xxx()
 }
 
 
-void test_op_Axxx()
+void test_op_LD_I_addr()
 {
     c8_t *ctx;
     uint8_t code[] = {
@@ -209,7 +209,7 @@ void test_op_Axxx()
 }
 
 
-void test_op_Bxxx()
+void test_op_JP_V0_addr()
 {
     c8_t *ctx;
     uint8_t code[] = {
@@ -237,12 +237,12 @@ int main(int argc, char **argv)
     UnityBegin("c8 test suite");
     RUN_TEST(test_load);
     RUN_TEST(test_op_invalid);
-    RUN_TEST(test_op_1xxx);
+    RUN_TEST(test_op_JP_addr);
     RUN_TEST(test_op_skip);
-    RUN_TEST(test_op_6xxx);
-    RUN_TEST(test_op_7xxx);
-    RUN_TEST(test_op_Axxx);
-    RUN_TEST(test_op_Bxxx);
+    RUN_TEST(test_op_LD_Vx_byte);
+    RUN_TEST(test_op_ADD_Vx_byte);
+    RUN_TEST(test_op_LD_I_addr);
+    RUN_TEST(test_op_JP_V0_addr);
     UnityEnd();
 
     return 0;
