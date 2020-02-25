@@ -45,6 +45,31 @@ static void test_op_invalid()
 }
 
 
+static void test_op_1xxx()
+{
+    c8_t *ctx;
+    uint8_t code[] = {
+            0x60, 0x36, // 000: LD V0, 0x36
+            0x16, 0x78, // 002: JP 0x678
+            0x10, 0x04, // 004: JP 0x004
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+
+    TEST_ASSERT_EQUAL(0x678, ctx->reg.pc);
+    TEST_ASSERT_EQUAL_STRING("JP\t0x678", ctx->last.opstr);
+
+    c8_set_pc(ctx, 4);
+    TEST_ASSERT_EQUAL(4, ctx->reg.pc);
+    TEST_ASSERT_EQUAL(ERR_INFINIT_LOOP, c8_step(ctx));
+}
+
+
 static void test_op_6xxx()
 {
     c8_t *ctx;
@@ -155,6 +180,7 @@ int main(int argc, char **argv)
     UnityBegin("c8 test suite");
     RUN_TEST(test_load);
     RUN_TEST(test_op_invalid);
+    RUN_TEST(test_op_1xxx);
     RUN_TEST(test_op_6xxx);
     RUN_TEST(test_op_7xxx);
     RUN_TEST(test_op_Axxx);

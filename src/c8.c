@@ -37,6 +37,20 @@ struct c8
 };
 
 /**
+ * 1nnn - JP addr
+ * Jump to location nnn.
+ */
+static int handle_1xxx(c8_t *ctx, uint16_t opcode)
+{
+    uint16_t value = opcode & 0xfff;
+
+    ctx->reg.pc = value;
+    snprintf(ctx->last.opstr, OPSTRLEN, "JP\t0x%03X", value);
+
+    return ERR_OK;
+}
+
+/**
  * 6xkk - LD Vx, byte
  * Set Vx = kk.
  */
@@ -125,6 +139,13 @@ int c8_step(c8_t *ctx)
 
     switch (opcode & 0xf000)
     {
+        case 0x1000:
+        {
+            ret = handle_1xxx(ctx, opcode);
+            if (ctx->reg.pc == ctx->last.pc)
+                ret = ERR_INFINIT_LOOP;
+            break;
+        }
         case 0x6000:
         {
             ret = handle_6xxx(ctx, opcode);
@@ -161,6 +182,11 @@ int c8_load(c8_t *ctx, uint16_t address, uint8_t *data, uint16_t size)
         return ERR_OUT_OF_MEM;
     memcpy(&ctx->mem[address], data, size);
     return ERR_OK;
+}
+
+void c8_set_pc(c8_t *ctx, uint16_t pc)
+{
+    ctx->reg.pc = pc;
 }
 
 void c8_debug_dump_memory(c8_t *ctx)
