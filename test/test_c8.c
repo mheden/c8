@@ -69,6 +69,8 @@ static void test_op_6xxx()
     TEST_ASSERT_EQUAL_HEX8(0x51, ctx->reg.v[0]);
     TEST_ASSERT_EQUAL_HEX8(0x12, ctx->reg.v[0xb]);
     TEST_ASSERT_EQUAL_HEX8(0x36, ctx->reg.v[0xe]);
+
+    TEST_ASSERT_EQUAL_STRING("LD\tVE,\t0x36", ctx->last.opstr);
 }
 
 
