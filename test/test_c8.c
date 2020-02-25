@@ -274,6 +274,152 @@ static void test_op_subroutine()
     TEST_ASSERT_EQUAL_STRING("RET", ctx->last.opstr);
 }
 
+void test_op_OP_Vx_Vy()
+{
+    c8_t *ctx;
+    uint8_t code[] = {
+            0x60, 0x56, // LD V0, 0x56
+            0x61, 0x78, // LD V1, 0x78
+            0x80, 0x10, // LD V0, V1
+
+            0x60, 0x56, // LD V0, 0x56
+            0x61, 0x78, // LD V1, 0x78
+            0x80, 0x11, // OR V0, V1
+
+            0x60, 0x56, // LD V0, 0x56
+            0x61, 0x78, // LD V1, 0x78
+            0x80, 0x12, // AND V0, V1
+
+            0x60, 0x56, // LD V0, 0x56
+            0x61, 0x78, // LD V1, 0x78
+            0x80, 0x13, // XOR V0, V1
+
+            // ADD
+            0x60, 0x56, // LD V0, 0x56
+            0x61, 0x78, // LD V1, 0x78
+            0x80, 0x14, // ADD V0, V1
+
+            0x60, 0x9a, // LD V0, 0x9a
+            0x61, 0x89, // LD V1, 0x89
+            0x80, 0x14, // ADD V0, V1
+
+            // SUB
+            0x60, 0x78, // LD V0, 0x78
+            0x61, 0x56, // LD V1, 0x56
+            0x80, 0x15, // SUB V0, V1
+
+            0x60, 0x56, // LD V0, 0x56
+            0x61, 0x78, // LD V1, 0x78
+            0x80, 0x15, // SUB V0, V1
+
+            // SHR
+            0x61, 0x56, // LD V1, 0x56
+            0x80, 0x16, // SHR V0, V1
+            0x61, 0x55, // LD V1, 0x55
+            0x80, 0x16, // SHR V0, V1
+
+            // SUBN
+            0x60, 0x78, // LD V0, 0x78
+            0x61, 0x56, // LD V1, 0x56
+            0x80, 0x17, // SUBN V0, V1
+
+            0x60, 0x56, // LD V0, 0x56
+            0x61, 0x78, // LD V1, 0x78
+            0x80, 0x17, // SUBN V0, V1
+
+            // SHL
+            0x61, 0x56, // LD V1, 0x56
+            0x80, 0x1e, // SHL V0, V1
+            0x61, 0x87, // LD V1, 0x87
+            0x80, 0x1e, // SHL V0, V1
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0x78, ctx->reg.v[0]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0x7e, ctx->reg.v[0]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0x50, ctx->reg.v[0]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0x2e, ctx->reg.v[0]);
+
+    // ADD
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0xce, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(0, ctx->reg.v[0xf]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0x23, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(1, ctx->reg.v[0xf]);
+
+    // SUB
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0x22, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(1, ctx->reg.v[0xf]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0xde, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(0, ctx->reg.v[0xf]);
+
+    // SHR
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0x2b, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(0, ctx->reg.v[0xf]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0x2a, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(1, ctx->reg.v[0xf]);
+
+    // SUBN
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0xde, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(0, ctx->reg.v[0xf]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0x22, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(1, ctx->reg.v[0xf]);
+
+    // SHL
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0xac, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(0, ctx->reg.v[0xf]);
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL_HEX8(0x0e, ctx->reg.v[0]);
+    TEST_ASSERT_EQUAL_HEX8(1, ctx->reg.v[0xf]);
+}
+
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -289,6 +435,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_op_LD_I_addr);
     RUN_TEST(test_op_JP_V0_addr);
     RUN_TEST(test_op_subroutine);
+    RUN_TEST(test_op_OP_Vx_Vy);
     UnityEnd();
 
     return 0;

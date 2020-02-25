@@ -175,6 +175,132 @@ static int op_ADD_Vx_byte(c8_t *ctx, uint16_t opcode)
     return ERR_OK;
 }
 
+/*
+ * 8000 - OP Vx, Vy
+ */
+static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    int ret = ERR_INVALID_OP;
+    uint8_t regX, regY;
+
+    regX = (opcode >> 8) & 0xF;
+    regY = (opcode >> 4) & 0xF;
+
+    switch (opcode & 0xF)
+    {
+        case 0:
+        {
+            /*
+             * 8xy0 - LD Vx, Vy
+             * Set Vx = Vy.
+             */
+            ctx->reg.v[regX] = ctx->reg.v[regY];
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\tV%X", regX, regY);
+            ret = ERR_OK;
+            break;
+        }
+        case 1:
+        {
+            /*
+             * 8xy1 - OR Vx, Vy
+             * Set Vx = Vx OR Vy.
+             */
+            ctx->reg.v[regX] |= ctx->reg.v[regY];
+            snprintf(ctx->last.opstr, OPSTRLEN, "OR\tV%X,\tV%X", regX, regY);
+            ret = ERR_OK;
+            break;
+        }
+        case 2:
+        {
+            /*
+             * 8xy2 - AND Vx, Vy
+             * Set Vx = Vx AND Vy.
+             */
+            ctx->reg.v[regX] &= ctx->reg.v[regY];
+            snprintf(ctx->last.opstr, OPSTRLEN, "AND\tV%X,\tV%X", regX, regY);
+            ret = ERR_OK;
+            break;
+        }
+        case 3:
+        {
+            /*
+             * 8xy3 - XOR Vx, Vy
+             * Set Vx = Vx XOR Vy.
+             */
+            ctx->reg.v[regX] ^= ctx->reg.v[regY];
+            snprintf(ctx->last.opstr, OPSTRLEN, "XOR\tV%X,\tV%X", regX, regY);
+            ret = ERR_OK;
+            break;
+        }
+        case 4:
+        {
+            /*
+             * 8xy4 - ADD Vx, Vy
+             * Set Vx = Vx + Vy, set VF = carry.
+             */
+            ctx->reg.v[0xF] = (uint16_t)ctx->reg.v[regX]
+                                         + (uint16_t)ctx->reg.v[regY]
+                                 > 0xFF;
+            ctx->reg.v[regX] += ctx->reg.v[regY];
+            snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\tV%X", regX, regY);
+            ret = ERR_OK;
+            break;
+        }
+        case 5:
+        {
+            /*
+             * 8xy5 - SUB Vx, Vy
+             * Set Vx = Vx - Vy, set VF = NOT borrow.
+             */
+            ctx->reg.v[0xF] = ctx->reg.v[regX] > ctx->reg.v[regY];
+            ctx->reg.v[regX] -= ctx->reg.v[regY];
+            snprintf(ctx->last.opstr, OPSTRLEN, "SUB\tV%X,\tV%X", regX, regY);
+            ret = ERR_OK;
+            break;
+        }
+        case 6:
+        {
+            /*
+             * 8xy6 - SHR Vx , Vy
+             * Set Vx = Vy SHR 1.
+             */
+            ctx->reg.v[0xF] = ctx->reg.v[regY] & 0x1;
+            ctx->reg.v[regX] = ctx->reg.v[regY] >> 1;
+            snprintf(ctx->last.opstr, OPSTRLEN, "SHR\tV%X,\tV%X", regX, regY);
+            ret = ERR_OK;
+            break;
+        }
+        case 7:
+        {
+            /*
+             * 8xy7 - SUBN Vx, Vy
+             * Set Vx = Vy - Vx, set VF = NOT borrow.
+             */
+            ctx->reg.v[0xF] = ctx->reg.v[regY] > ctx->reg.v[regX];
+            ctx->reg.v[regX] = ctx->reg.v[regY] - ctx->reg.v[regX];
+            snprintf(ctx->last.opstr, OPSTRLEN, "SUBN\tV%X,\tV%X", regX, regY);
+            ret = ERR_OK;
+            break;
+        }
+        case 0xE:
+        {
+            /*
+             * 8xyE - SHL Vx , Vy
+             * Set Vx = Vy SHL 1.
+             */
+            ctx->reg.v[0xF] = ctx->reg.v[regY] & 0x80 ? 1 : 0;
+            ctx->reg.v[regX] = ctx->reg.v[regY] << 1;
+            snprintf(ctx->last.opstr, OPSTRLEN, "SHL\tV%X,\tV%X", regX, regY);
+            ret = ERR_OK;
+            break;
+        }
+        default:
+            ret = ERR_INVALID_OP;
+    }
+
+    return ret;
+}
+
 /**
  * 9xy0 - SNE Vx, Vy
  * Skip next instruction if Vx != Vy.
@@ -294,6 +420,11 @@ int c8_step(c8_t *ctx)
             ret = op_ADD_Vx_byte(ctx, opcode);
             break;
         }
+        case 0x8000:
+        {
+            ret = op_OP_Vx_Vy(ctx, opcode);
+            break;
+        }
         case 0x9000:
         {
             if ((opcode & 0xF) == 0)
@@ -312,6 +443,7 @@ int c8_step(c8_t *ctx)
         }
     }
 
+    ctx->flags = FLAG_TRACE;
     if (ctx->flags & FLAG_TRACE)
         fprintf(stderr, "%03x:\t%04x\t;\t%s\n", ctx->last.pc, ctx->last.op,
                 ctx->last.opstr);
