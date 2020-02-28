@@ -68,7 +68,7 @@ void c8_redraw_ack(c8_t *ctx);
  *
  *
  */
-void c8_debug_dump_memory(c8_t *ctx);
+void c8_debug_dump_memory(c8_t *ctx, uint16_t address, uint16_t length);
 
 /**
  *

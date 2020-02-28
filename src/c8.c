@@ -584,20 +584,23 @@ void c8_set_pc(c8_t *ctx, uint16_t pc)
     ctx->reg.pc = pc;
 }
 
-void c8_debug_dump_memory(c8_t *ctx)
+void c8_debug_dump_memory(c8_t *ctx, uint16_t address, uint16_t length)
 {
-    int row, col;
-    uint8_t *memptr = ctx->mem;
+    int i = 0;
+    uint8_t *memptr = &ctx->mem[address];
 
-    for (row = 0; row < 128; row++)
+    for (i=0; i<length; i++)
     {
-        fprintf(stderr, "%03x:", row * col);
-        for (col = 0; col < 32; col++)
+        if (i % 16 == 0)
         {
-            fprintf(stderr, " %02x", *memptr++);
+            if (i != 0)
+                fprintf(stderr, "\n%03x:", address + i);
+            else
+                fprintf(stderr, "%03x:", address + i);
         }
-        fprintf(stderr, "\n");
+        fprintf(stderr, " %02x", *memptr++);
     }
+    fprintf(stderr, "\n");
 }
 
 void c8_debug_dump_state(c8_t *ctx)
