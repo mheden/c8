@@ -542,6 +542,15 @@ int c8_step(c8_t *ctx)
             ret = op_JP_V0_addr(ctx, opcode);
             break;
         }
+        case 0xC000:
+        {
+            uint8_t reg = (opcode >> 8) & 0xF;
+            uint8_t byte = opcode & 0xFF;
+            ctx->reg.v[reg] = rand() & byte;
+            snprintf(ctx->last.opstr, OPSTRLEN, "RND\tV%x,\t0x%X", reg, byte);
+            ret = ERR_OK;
+            break;
+        }
         case 0xF000:
         {
             ret = op_Fxxx(ctx, opcode);
@@ -560,6 +569,7 @@ int c8_step(c8_t *ctx)
 int c8_tick_60hz(c8_t *ctx)
 {
     int ret = ERR_OK;
+
     if (ctx->reg.delay_timer > 0)
         ctx->reg.delay_timer--;
     if (ctx->reg.sound_timer > 0)
