@@ -9,7 +9,14 @@
 #define OPSTRLEN 15
 
 #define BIT(n) (1 << (n))
-#define FLAG_TRACE BIT(0)
+#define FLAG_TRACE BIT (0)
+
+
+/* helpers for extracting values from opcodes */
+#define _NNN(opcode) ((opcode) & 0xFFF)
+#define _X__(opcode) (((opcode) >> 8) & 0xF)
+#define __Y_(opcode) (((opcode) >> 4) & 0xF)
+#define __KK(opcode) ((opcode) & 0xFF)
 
 
 struct c8
@@ -46,11 +53,9 @@ struct c8
 static int op_RET(c8_t *ctx, uint16_t opcode)
 {
     (void)opcode;
-
     ctx->reg.sp--;
     ctx->reg.pc = ctx->stack[ctx->reg.sp];
     snprintf(ctx->last.opstr, OPSTRLEN, "RET");
-
     return ERR_OK;
 }
 
@@ -60,12 +65,14 @@ static int op_RET(c8_t *ctx, uint16_t opcode)
  */
 static int op_JP_addr(c8_t *ctx, uint16_t opcode)
 {
-    uint16_t value = opcode & 0xFFF;
+    uint16_t addr = _NNN(opcode);
 
-    ctx->reg.pc = value;
-    snprintf(ctx->last.opstr, OPSTRLEN, "JP\t0x%03X", value);
-
-    return ERR_OK;
+    ctx->reg.pc = addr;
+    snprintf(ctx->last.opstr, OPSTRLEN, "JP\t0x%03X", addr);
+    if (ctx->reg.pc == ctx->last.pc)
+        return ERR_INFINIT_LOOP;
+    else
+        return ERR_OK;
 }
 
 /**
@@ -77,13 +84,12 @@ static int op_JP_addr(c8_t *ctx, uint16_t opcode)
  */
 static int op_CALL_addr(c8_t *ctx, uint16_t opcode)
 {
-    uint16_t value = opcode & 0xFFF;
+    uint16_t addr = _NNN(opcode);
 
     ctx->stack[ctx->reg.sp] = ctx->reg.pc;
     ctx->reg.sp++;
-    ctx->reg.pc = value;
-    snprintf(ctx->last.opstr, OPSTRLEN, "CALL\t0x%03X", value);
-
+    ctx->reg.pc = addr;
+    snprintf(ctx->last.opstr, OPSTRLEN, "CALL\t0x%03X", addr);
     return ERR_OK;
 }
 
@@ -93,15 +99,12 @@ static int op_CALL_addr(c8_t *ctx, uint16_t opcode)
  */
 static int op_SE_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
-    uint8_t reg, value;
+    uint8_t reg = _X__(opcode);
+    uint8_t byte = __KK(opcode);
 
-    reg = (opcode >> 8) & 0xF;
-    value = opcode & 0xFF;
-
-    if (ctx->reg.v[reg] == value)
+    if (ctx->reg.v[reg] == byte)
         ctx->reg.pc += 2;
-    snprintf(ctx->last.opstr, OPSTRLEN, "SE\tV%X,\t0x%02X", reg, value);
-
+    snprintf(ctx->last.opstr, OPSTRLEN, "SE\tV%X,\t0x%02X", reg, byte);
     return ERR_OK;
 }
 
@@ -111,15 +114,12 @@ static int op_SE_Vx_byte(c8_t *ctx, uint16_t opcode)
  */
 static int op_SNE_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
-    uint8_t reg, value;
+    uint8_t reg = _X__(opcode);
+    uint8_t byte = __KK(opcode);
 
-    reg = (opcode >> 8) & 0xF;
-    value = opcode & 0xFF;
-
-    if (ctx->reg.v[reg] != value)
+    if (ctx->reg.v[reg] != byte)
         ctx->reg.pc += 2;
-    snprintf(ctx->last.opstr, OPSTRLEN, "SNE\tV%X,\t0x%02X", reg, value);
-
+    snprintf(ctx->last.opstr, OPSTRLEN, "SNE\tV%X,\t0x%02X", reg, byte);
     return ERR_OK;
 }
 
@@ -129,15 +129,12 @@ static int op_SNE_Vx_byte(c8_t *ctx, uint16_t opcode)
  */
 static int op_SE_Vx_Vy(c8_t *ctx, uint16_t opcode)
 {
-    uint8_t regX, regY;
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
 
-    regX = (opcode >> 8) & 0xF;
-    regY = (opcode >> 4) & 0xF;
-
-    if (ctx->reg.v[regX] == ctx->reg.v[regY])
+    if (ctx->reg.v[x] == ctx->reg.v[y])
         ctx->reg.pc += 2;
-    snprintf(ctx->last.opstr, OPSTRLEN, "SE\tV%X,\tV%X", regX, regY);
-
+    snprintf(ctx->last.opstr, OPSTRLEN, "SE\tV%X,\tV%X", x, y);
     return ERR_OK;
 }
 
@@ -147,14 +144,11 @@ static int op_SE_Vx_Vy(c8_t *ctx, uint16_t opcode)
  */
 static int op_LD_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
-    uint8_t reg, value;
+    uint8_t reg = _X__(opcode);
+    uint8_t byte = __KK(opcode);
 
-    reg = (opcode >> 8) & 0xF;
-    value = opcode & 0xFF;
-
-    ctx->reg.v[reg] = value;
-    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\t0x%02X", reg, value);
-
+    ctx->reg.v[reg] = byte;
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\t0x%02X", reg, byte);
     return ERR_OK;
 }
 
@@ -164,14 +158,11 @@ static int op_LD_Vx_byte(c8_t *ctx, uint16_t opcode)
  */
 static int op_ADD_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
-    uint8_t reg, value;
+    uint8_t reg = _X__(opcode);
+    uint8_t byte = __KK(opcode);
 
-    reg = (opcode >> 8) & 0xF;
-    value = opcode & 0xFF;
-
-    ctx->reg.v[reg] += value;
-    snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\t0x%02X", reg, value);
-
+    ctx->reg.v[reg] += byte;
+    snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\t0x%02X", reg, byte);
     return ERR_OK;
 }
 
@@ -181,10 +172,8 @@ static int op_ADD_Vx_byte(c8_t *ctx, uint16_t opcode)
 static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
 {
     int ret = ERR_INVALID_OP;
-    uint8_t regX, regY;
-
-    regX = (opcode >> 8) & 0xF;
-    regY = (opcode >> 4) & 0xF;
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
 
     switch (opcode & 0xF)
     {
@@ -194,8 +183,8 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
              * 8xy0 - LD Vx, Vy
              * Set Vx = Vy.
              */
-            ctx->reg.v[regX] = ctx->reg.v[regY];
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\tV%X", regX, regY);
+            ctx->reg.v[x] = ctx->reg.v[y];
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\tV%X", x, y);
             ret = ERR_OK;
             break;
         }
@@ -205,8 +194,8 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
              * 8xy1 - OR Vx, Vy
              * Set Vx = Vx OR Vy.
              */
-            ctx->reg.v[regX] |= ctx->reg.v[regY];
-            snprintf(ctx->last.opstr, OPSTRLEN, "OR\tV%X,\tV%X", regX, regY);
+            ctx->reg.v[x] |= ctx->reg.v[y];
+            snprintf(ctx->last.opstr, OPSTRLEN, "OR\tV%X,\tV%X", x, y);
             ret = ERR_OK;
             break;
         }
@@ -216,8 +205,8 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
              * 8xy2 - AND Vx, Vy
              * Set Vx = Vx AND Vy.
              */
-            ctx->reg.v[regX] &= ctx->reg.v[regY];
-            snprintf(ctx->last.opstr, OPSTRLEN, "AND\tV%X,\tV%X", regX, regY);
+            ctx->reg.v[x] &= ctx->reg.v[y];
+            snprintf(ctx->last.opstr, OPSTRLEN, "AND\tV%X,\tV%X", x, y);
             ret = ERR_OK;
             break;
         }
@@ -227,8 +216,8 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
              * 8xy3 - XOR Vx, Vy
              * Set Vx = Vx XOR Vy.
              */
-            ctx->reg.v[regX] ^= ctx->reg.v[regY];
-            snprintf(ctx->last.opstr, OPSTRLEN, "XOR\tV%X,\tV%X", regX, regY);
+            ctx->reg.v[x] ^= ctx->reg.v[y];
+            snprintf(ctx->last.opstr, OPSTRLEN, "XOR\tV%X,\tV%X", x, y);
             ret = ERR_OK;
             break;
         }
@@ -239,10 +228,10 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
              * Set Vx = Vx + Vy, set VF = carry.
              */
             ctx->reg.v[0xF] =
-                    (uint16_t)ctx->reg.v[regX] + (uint16_t)ctx->reg.v[regY]
+                    (uint16_t)ctx->reg.v[x] + (uint16_t)ctx->reg.v[y]
                     > 0xFF;
-            ctx->reg.v[regX] += ctx->reg.v[regY];
-            snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\tV%X", regX, regY);
+            ctx->reg.v[x] += ctx->reg.v[y];
+            snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\tV%X", x, y);
             ret = ERR_OK;
             break;
         }
@@ -252,9 +241,9 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
              * 8xy5 - SUB Vx, Vy
              * Set Vx = Vx - Vy, set VF = NOT borrow.
              */
-            ctx->reg.v[0xF] = ctx->reg.v[regX] > ctx->reg.v[regY];
-            ctx->reg.v[regX] -= ctx->reg.v[regY];
-            snprintf(ctx->last.opstr, OPSTRLEN, "SUB\tV%X,\tV%X", regX, regY);
+            ctx->reg.v[0xF] = ctx->reg.v[x] > ctx->reg.v[y];
+            ctx->reg.v[x] -= ctx->reg.v[y];
+            snprintf(ctx->last.opstr, OPSTRLEN, "SUB\tV%X,\tV%X", x, y);
             ret = ERR_OK;
             break;
         }
@@ -264,9 +253,9 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
              * 8xy6 - SHR Vx , Vy
              * Set Vx = Vy SHR 1.
              */
-            ctx->reg.v[0xF] = ctx->reg.v[regY] & 0x1;
-            ctx->reg.v[regX] = ctx->reg.v[regY] >> 1;
-            snprintf(ctx->last.opstr, OPSTRLEN, "SHR\tV%X,\tV%X", regX, regY);
+            ctx->reg.v[0xF] = ctx->reg.v[y] & 0x1;
+            ctx->reg.v[x] = ctx->reg.v[y] >> 1;
+            snprintf(ctx->last.opstr, OPSTRLEN, "SHR\tV%X,\tV%X", x, y);
             ret = ERR_OK;
             break;
         }
@@ -276,9 +265,9 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
              * 8xy7 - SUBN Vx, Vy
              * Set Vx = Vy - Vx, set VF = NOT borrow.
              */
-            ctx->reg.v[0xF] = ctx->reg.v[regY] > ctx->reg.v[regX];
-            ctx->reg.v[regX] = ctx->reg.v[regY] - ctx->reg.v[regX];
-            snprintf(ctx->last.opstr, OPSTRLEN, "SUBN\tV%X,\tV%X", regX, regY);
+            ctx->reg.v[0xF] = ctx->reg.v[y] > ctx->reg.v[x];
+            ctx->reg.v[x] = ctx->reg.v[y] - ctx->reg.v[x];
+            snprintf(ctx->last.opstr, OPSTRLEN, "SUBN\tV%X,\tV%X", x, y);
             ret = ERR_OK;
             break;
         }
@@ -288,9 +277,9 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
              * 8xyE - SHL Vx , Vy
              * Set Vx = Vy SHL 1.
              */
-            ctx->reg.v[0xF] = ctx->reg.v[regY] & 0x80 ? 1 : 0;
-            ctx->reg.v[regX] = ctx->reg.v[regY] << 1;
-            snprintf(ctx->last.opstr, OPSTRLEN, "SHL\tV%X,\tV%X", regX, regY);
+            ctx->reg.v[0xF] = ctx->reg.v[y] & 0x80 ? 1 : 0;
+            ctx->reg.v[x] = ctx->reg.v[y] << 1;
+            snprintf(ctx->last.opstr, OPSTRLEN, "SHL\tV%X,\tV%X", x, y);
             ret = ERR_OK;
             break;
         }
@@ -307,15 +296,12 @@ static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
  */
 static int op_SNE_Vx_Vy(c8_t *ctx, uint16_t opcode)
 {
-    uint8_t regX, regY;
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
 
-    regX = (opcode >> 8) & 0xF;
-    regY = (opcode >> 4) & 0xF;
-
-    if (ctx->reg.v[regX] != ctx->reg.v[regY])
+    if (ctx->reg.v[x] != ctx->reg.v[y])
         ctx->reg.pc += 2;
-    snprintf(ctx->last.opstr, OPSTRLEN, "SNE\tV%X,\tV%X", regX, regY);
-
+    snprintf(ctx->last.opstr, OPSTRLEN, "SNE\tV%X,\tV%X", x, y);
     return ERR_OK;
 }
 
@@ -325,11 +311,10 @@ static int op_SNE_Vx_Vy(c8_t *ctx, uint16_t opcode)
  */
 static int op_LD_I_addr(c8_t *ctx, uint16_t opcode)
 {
-    uint16_t value = opcode & 0xFFF;
+    uint16_t addr = _NNN(opcode);
 
-    ctx->reg.i = value;
-    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tI,\t0x%03X", value);
-
+    ctx->reg.i = addr;
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tI,\t0x%03X", addr);
     return ERR_OK;
 }
 
@@ -339,11 +324,10 @@ static int op_LD_I_addr(c8_t *ctx, uint16_t opcode)
  */
 static int op_JP_V0_addr(c8_t *ctx, uint16_t opcode)
 {
-    uint16_t value = opcode & 0xFFF;
+    uint16_t addr = _NNN(opcode);
 
-    ctx->reg.pc = ctx->reg.v[0] + value;
-    snprintf(ctx->last.opstr, OPSTRLEN, "JP\tV0,\t0x%03X", value);
-
+    ctx->reg.pc = ctx->reg.v[0] + addr;
+    snprintf(ctx->last.opstr, OPSTRLEN, "JP\tV0,\t0x%03X", addr);
     return ERR_OK;
 }
 
@@ -353,7 +337,7 @@ static int op_JP_V0_addr(c8_t *ctx, uint16_t opcode)
 static int op_Fxxx(c8_t *ctx, uint16_t opcode)
 {
     int ret = ERR_OK;
-    uint8_t reg = (opcode >> 8) & 0xF;
+    uint8_t reg = _X__(opcode);
 
     switch (opcode & 0xFF)
     {
@@ -408,10 +392,9 @@ static int op_Fxxx(c8_t *ctx, uint16_t opcode)
         case 0x33:
         {
             /* LD B, Vx */
-            uint16_t i = ctx->reg.i;
-            ctx->mem[i + 0] = (ctx->reg.v[reg] / 100) % 10;
-            ctx->mem[i + 1] = (ctx->reg.v[reg] / 10) % 10;
-            ctx->mem[i + 2] = ctx->reg.v[reg] % 10;
+            ctx->mem[ctx->reg.i + 0] = (ctx->reg.v[reg] / 100) % 10;
+            ctx->mem[ctx->reg.i + 1] = (ctx->reg.v[reg] / 10) % 10;
+            ctx->mem[ctx->reg.i + 2] = ctx->reg.v[reg] % 10;
             snprintf(ctx->last.opstr, OPSTRLEN, "LD\tB,\tV%X", reg);
             ret = ERR_OK;
             break;
@@ -420,12 +403,9 @@ static int op_Fxxx(c8_t *ctx, uint16_t opcode)
         {
             /* LD [I], Vx */
             uint8_t i;
-            uint8_t to_reg = (opcode >> 8) & 0xF;
-            for (i = 0; i <= to_reg; i++)
-            {
+            for (i = 0; i <= reg; i++)
                 ctx->mem[ctx->reg.i++] = ctx->reg.v[i];
-            }
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\t[I],\tV%X", to_reg);
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\t[I],\tV%X", reg);
             ret = ERR_OK;
             break;
         }
@@ -433,12 +413,9 @@ static int op_Fxxx(c8_t *ctx, uint16_t opcode)
         {
             /* LD Vx, [I] */
             uint8_t i;
-            uint8_t to_reg = (opcode >> 8) & 0xF;
-            for (i = 0; i <= to_reg; i++)
-            {
+            for (i = 0; i <= reg; i++)
                 ctx->reg.v[i] = ctx->mem[ctx->reg.i++];
-            }
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\t[I]", to_reg);
+            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\t[I]", reg);
             ret = ERR_OK;
             break;
         }
@@ -486,8 +463,6 @@ int c8_step(c8_t *ctx)
         case 0x1000:
         {
             ret = op_JP_addr(ctx, opcode);
-            if (ctx->reg.pc == ctx->last.pc)
-                ret = ERR_INFINIT_LOOP;
             break;
         }
         case 0x2000:
@@ -544,8 +519,12 @@ int c8_step(c8_t *ctx)
         }
         case 0xC000:
         {
-            uint8_t reg = (opcode >> 8) & 0xF;
-            uint8_t byte = opcode & 0xFF;
+            /*
+             * Cxkk - RND Vx, byte
+             * Set Vx = random byte AND kk.
+             */
+            uint8_t reg = _X__(opcode);
+            uint8_t byte = __KK(opcode);
             ctx->reg.v[reg] = rand() & byte;
             snprintf(ctx->last.opstr, OPSTRLEN, "RND\tV%x,\t0x%X", reg, byte);
             ret = ERR_OK;
@@ -558,7 +537,7 @@ int c8_step(c8_t *ctx)
         }
     }
 
-    ctx->flags = FLAG_TRACE;
+    // ctx->flags = FLAG_TRACE;
     if (ctx->flags & FLAG_TRACE)
         fprintf(stderr, "%03x:\t%04x\t;\t%s\n", ctx->last.pc, ctx->last.op,
                 ctx->last.opstr);
@@ -599,7 +578,7 @@ void c8_debug_dump_memory(c8_t *ctx, uint16_t address, uint16_t length)
     int i = 0;
     uint8_t *memptr = &ctx->mem[address];
 
-    for (i=0; i<length; i++)
+    for (i = 0; i < length; i++)
     {
         if (i % 16 == 0)
         {
