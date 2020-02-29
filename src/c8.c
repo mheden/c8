@@ -9,7 +9,7 @@
 #define OPSTRLEN 15
 
 #define BIT(n) (1 << (n))
-#define FLAG_TRACE BIT (0)
+#define FLAG_TRACE BIT(0)
 
 
 /* helpers for extracting values from opcodes */
@@ -42,6 +42,18 @@ struct c8
     uint8_t disp[WIDTH][HEIGHT];
     uint8_t flags;
 };
+
+
+typedef int (*opfn)(c8_t *ctx, uint16_t opcode);
+
+typedef struct {
+    uint16_t opcode;
+    uint16_t mask;
+    opfn fn;
+} op_t;
+
+#define ARRAY_SIZE(x) ((sizeof x) / (sizeof *x))
+
 
 /**
  * 00EE - RET
@@ -166,128 +178,136 @@ static int op_ADD_Vx_byte(c8_t *ctx, uint16_t opcode)
     return ERR_OK;
 }
 
-/*
- * 8000 - OP Vx, Vy
+/**
+ * 8xy0 - LD Vx, Vy
+ * Set Vx = Vy.
  */
-static int op_OP_Vx_Vy(c8_t *ctx, uint16_t opcode)
+static int op_LD_Vx_Vy(c8_t *ctx, uint16_t opcode)
 {
-    int ret = ERR_INVALID_OP;
     uint8_t x = _X__(opcode);
     uint8_t y = __Y_(opcode);
 
-    switch (opcode & 0xF)
-    {
-        case 0:
-        {
-            /*
-             * 8xy0 - LD Vx, Vy
-             * Set Vx = Vy.
-             */
-            ctx->reg.v[x] = ctx->reg.v[y];
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\tV%X", x, y);
-            ret = ERR_OK;
-            break;
-        }
-        case 1:
-        {
-            /*
-             * 8xy1 - OR Vx, Vy
-             * Set Vx = Vx OR Vy.
-             */
-            ctx->reg.v[x] |= ctx->reg.v[y];
-            snprintf(ctx->last.opstr, OPSTRLEN, "OR\tV%X,\tV%X", x, y);
-            ret = ERR_OK;
-            break;
-        }
-        case 2:
-        {
-            /*
-             * 8xy2 - AND Vx, Vy
-             * Set Vx = Vx AND Vy.
-             */
-            ctx->reg.v[x] &= ctx->reg.v[y];
-            snprintf(ctx->last.opstr, OPSTRLEN, "AND\tV%X,\tV%X", x, y);
-            ret = ERR_OK;
-            break;
-        }
-        case 3:
-        {
-            /*
-             * 8xy3 - XOR Vx, Vy
-             * Set Vx = Vx XOR Vy.
-             */
-            ctx->reg.v[x] ^= ctx->reg.v[y];
-            snprintf(ctx->last.opstr, OPSTRLEN, "XOR\tV%X,\tV%X", x, y);
-            ret = ERR_OK;
-            break;
-        }
-        case 4:
-        {
-            /*
-             * 8xy4 - ADD Vx, Vy
-             * Set Vx = Vx + Vy, set VF = carry.
-             */
-            ctx->reg.v[0xF] =
-                    (uint16_t)ctx->reg.v[x] + (uint16_t)ctx->reg.v[y]
-                    > 0xFF;
-            ctx->reg.v[x] += ctx->reg.v[y];
-            snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\tV%X", x, y);
-            ret = ERR_OK;
-            break;
-        }
-        case 5:
-        {
-            /*
-             * 8xy5 - SUB Vx, Vy
-             * Set Vx = Vx - Vy, set VF = NOT borrow.
-             */
-            ctx->reg.v[0xF] = ctx->reg.v[x] > ctx->reg.v[y];
-            ctx->reg.v[x] -= ctx->reg.v[y];
-            snprintf(ctx->last.opstr, OPSTRLEN, "SUB\tV%X,\tV%X", x, y);
-            ret = ERR_OK;
-            break;
-        }
-        case 6:
-        {
-            /*
-             * 8xy6 - SHR Vx , Vy
-             * Set Vx = Vy SHR 1.
-             */
-            ctx->reg.v[0xF] = ctx->reg.v[y] & 0x1;
-            ctx->reg.v[x] = ctx->reg.v[y] >> 1;
-            snprintf(ctx->last.opstr, OPSTRLEN, "SHR\tV%X,\tV%X", x, y);
-            ret = ERR_OK;
-            break;
-        }
-        case 7:
-        {
-            /*
-             * 8xy7 - SUBN Vx, Vy
-             * Set Vx = Vy - Vx, set VF = NOT borrow.
-             */
-            ctx->reg.v[0xF] = ctx->reg.v[y] > ctx->reg.v[x];
-            ctx->reg.v[x] = ctx->reg.v[y] - ctx->reg.v[x];
-            snprintf(ctx->last.opstr, OPSTRLEN, "SUBN\tV%X,\tV%X", x, y);
-            ret = ERR_OK;
-            break;
-        }
-        case 0xE:
-        {
-            /*
-             * 8xyE - SHL Vx , Vy
-             * Set Vx = Vy SHL 1.
-             */
-            ctx->reg.v[0xF] = ctx->reg.v[y] & 0x80 ? 1 : 0;
-            ctx->reg.v[x] = ctx->reg.v[y] << 1;
-            snprintf(ctx->last.opstr, OPSTRLEN, "SHL\tV%X,\tV%X", x, y);
-            ret = ERR_OK;
-            break;
-        }
-        default:
-            ret = ERR_INVALID_OP;
-    }
+    ctx->reg.v[x] = ctx->reg.v[y];
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\tV%X", x, y);
+    return ERR_OK;
+}
 
-    return ret;
+/**
+ * 8xy1 - OR Vx, Vy
+* Set Vx = Vx OR Vy.
+*/
+static int op_OR_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
+
+    ctx->reg.v[x] |= ctx->reg.v[y];
+    snprintf(ctx->last.opstr, OPSTRLEN, "OR\tV%X,\tV%X", x, y);
+    return ERR_OK;
+}
+
+
+/**
+ * 8xy2 - AND Vx, Vy
+ * Set Vx = Vx AND Vy.
+ */
+static int op_AND_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
+
+    ctx->reg.v[x] &= ctx->reg.v[y];
+    snprintf(ctx->last.opstr, OPSTRLEN, "AND\tV%X,\tV%X", x, y);
+    return ERR_OK;
+}
+
+/**
+ * 8xy3 - XOR Vx, Vy
+ * Set Vx = Vx XOR Vy.
+ */
+static int op_XOR_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
+
+    ctx->reg.v[x] ^= ctx->reg.v[y];
+    snprintf(ctx->last.opstr, OPSTRLEN, "XOR\tV%X,\tV%X", x, y);
+    return ERR_OK;
+}
+
+/**
+ * 8xy4 - ADD Vx, Vy
+ * Set Vx = Vx + Vy, set VF = carry.
+ */
+static int op_ADD_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
+
+    ctx->reg.v[0xF] = (uint16_t)ctx->reg.v[x] + (uint16_t)ctx->reg.v[y] > 0xFF;
+    ctx->reg.v[x] += ctx->reg.v[y];
+    snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tV%X,\tV%X", x, y);
+    return ERR_OK;
+}
+ 
+/**
+ * 8xy5 - SUB Vx, Vy
+ * Set Vx = Vx - Vy, set VF = NOT borrow.
+ */
+static int op_SUB_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
+
+    ctx->reg.v[0xF] = ctx->reg.v[x] > ctx->reg.v[y];
+    ctx->reg.v[x] -= ctx->reg.v[y];
+    snprintf(ctx->last.opstr, OPSTRLEN, "SUB\tV%X,\tV%X", x, y);
+    return ERR_OK;
+}
+
+/**
+ * 8xy6 - SHR Vx, Vy
+ * Set Vx = Vy SHR 1.
+ */
+static int op_SHR_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
+
+    ctx->reg.v[0xF] = ctx->reg.v[y] & 0x1;
+    ctx->reg.v[x] = ctx->reg.v[y] >> 1;
+    snprintf(ctx->last.opstr, OPSTRLEN, "SHR\tV%X,\tV%X", x, y);
+    return ERR_OK;
+}
+
+/**
+ * 8xy7 - SUBN Vx, Vy
+ * Set Vx = Vy - Vx, set VF = NOT borrow.
+ */
+static int op_SUBN_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
+
+    ctx->reg.v[0xF] = ctx->reg.v[y] > ctx->reg.v[x];
+    ctx->reg.v[x] = ctx->reg.v[y] - ctx->reg.v[x];
+    snprintf(ctx->last.opstr, OPSTRLEN, "SUBN\tV%X,\tV%X", x, y);
+    return ERR_OK;
+}
+
+/**
+ * 8xyE - SHL Vx , Vy
+ * Set Vx = Vy SHL 1.
+ */
+static int op_SHL_Vx_Vy(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
+
+    ctx->reg.v[0xF] = ctx->reg.v[y] & 0x80 ? 1 : 0;
+    ctx->reg.v[x] = ctx->reg.v[y] << 1;
+    snprintf(ctx->last.opstr, OPSTRLEN, "SHL\tV%X,\tV%X", x, y);
+    return ERR_OK;
 }
 
 /**
@@ -332,104 +352,142 @@ static int op_JP_V0_addr(c8_t *ctx, uint16_t opcode)
 }
 
 /**
- * Misc instructions under 0xFnnn
+ * Cxkk - RND Vx, byte
+ * Set Vx = random byte AND kk.
  */
-static int op_Fxxx(c8_t *ctx, uint16_t opcode)
+static int op_RND_Vx_byte(c8_t *ctx, uint16_t opcode)
 {
-    int ret = ERR_OK;
+    uint8_t reg = _X__(opcode);
+    uint8_t byte = __KK(opcode);
+
+    ctx->reg.v[reg] = rand() & byte;
+    snprintf(ctx->last.opstr, OPSTRLEN, "RND\tV%x,\t0x%X", reg, byte);
+    return ERR_OK;
+}
+
+static int op_LD_Vx_DT(c8_t *ctx, uint16_t opcode)
+{
     uint8_t reg = _X__(opcode);
 
-    switch (opcode & 0xFF)
-    {
-        case 0x07:
-        {
-            /* LD Vx, DT */
-            ctx->reg.v[reg] = ctx->reg.delay_timer;
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\tDT", reg);
-            ret = ERR_OK;
-            break;
-        }
-        // case 0x0A:
-        // {
-        /* LD Vx, K */
-        /* TODO: */
-        // break;
-        // }
-        case 0x15:
-        {
-            /* LD DT, Vx */
-            ctx->reg.delay_timer = ctx->reg.v[reg];
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tDT,\tV%X", reg);
-            ret = ERR_OK;
-            break;
-        }
-        case 0x18:
-        {
-            /* LD ST, Vx */
-            ctx->reg.sound_timer = ctx->reg.v[reg];
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tST,\tV%X", reg);
-            ret = ERR_OK;
-            break;
-        }
-        case 0x1E:
-        {
-            /* ADD I, Vx */
-            ctx->reg.v[0xF] =
-                    ((uint32_t)ctx->reg.i + (uint32_t)ctx->reg.v[reg]) > 0xFFF;
-            ctx->reg.i = ctx->reg.i + ctx->reg.v[reg];
-            snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tI,\tV%X", reg);
-            ret = ERR_OK;
-            break;
-        }
-        case 0x29:
-        {
-            /* LD I, FONT(Vx) */
-            ctx->reg.i = ctx->reg.v[reg] * 5;
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tI,\tFONT(V%X)", reg);
-            ret = ERR_OK;
-            break;
-        }
-        case 0x33:
-        {
-            /* LD B, Vx */
-            ctx->mem[ctx->reg.i + 0] = (ctx->reg.v[reg] / 100) % 10;
-            ctx->mem[ctx->reg.i + 1] = (ctx->reg.v[reg] / 10) % 10;
-            ctx->mem[ctx->reg.i + 2] = ctx->reg.v[reg] % 10;
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tB,\tV%X", reg);
-            ret = ERR_OK;
-            break;
-        }
-        case 0x55:
-        {
-            /* LD [I], Vx */
-            uint8_t i;
-            for (i = 0; i <= reg; i++)
-                ctx->mem[ctx->reg.i++] = ctx->reg.v[i];
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\t[I],\tV%X", reg);
-            ret = ERR_OK;
-            break;
-        }
-        case 0x65:
-        {
-            /* LD Vx, [I] */
-            uint8_t i;
-            for (i = 0; i <= reg; i++)
-                ctx->reg.v[i] = ctx->mem[ctx->reg.i++];
-            snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\t[I]", reg);
-            ret = ERR_OK;
-            break;
-        }
-        default:
-            ret = ERR_INVALID_OP;
-    }
-    return ret;
+    ctx->reg.v[reg] = ctx->reg.delay_timer;
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\tDT", reg);
+    return ERR_OK;
 }
+
+// case 0x0A:
+// {
+/* LD Vx, K */
+/* TODO: */
+// break;
+// }
+
+static int op_LD_DT_Vx(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg = _X__(opcode);
+
+    ctx->reg.delay_timer = ctx->reg.v[reg];
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tDT,\tV%X", reg);
+    return ERR_OK;
+}
+
+static int op_LD_ST_Vx(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg = _X__(opcode);
+
+    ctx->reg.sound_timer = ctx->reg.v[reg];
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tST,\tV%X", reg);
+    return ERR_OK;
+}
+
+static int op_ADD_I_Vx(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg = _X__(opcode);
+
+    ctx->reg.v[0xF] =
+            ((uint32_t)ctx->reg.i + (uint32_t)ctx->reg.v[reg]) > 0xFFF;
+    ctx->reg.i = ctx->reg.i + ctx->reg.v[reg];
+    snprintf(ctx->last.opstr, OPSTRLEN, "ADD\tI,\tV%X", reg);
+    return ERR_OK;
+}
+
+static int op_LD_I_FONT_Vx(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg = _X__(opcode);
+
+    ctx->reg.i = ctx->reg.v[reg] * 5;
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tI,\tFONT(V%X)", reg);
+    return ERR_OK;
+}
+
+static int op_LD_B_Vx(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg = _X__(opcode);
+
+    ctx->mem[ctx->reg.i + 0] = (ctx->reg.v[reg] / 100) % 10;
+    ctx->mem[ctx->reg.i + 1] = (ctx->reg.v[reg] / 10) % 10;
+    ctx->mem[ctx->reg.i + 2] = ctx->reg.v[reg] % 10;
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tB,\tV%X", reg);
+    return ERR_OK;
+}
+
+static int op_LD_addrI_Vx(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg = _X__(opcode);
+    uint8_t i;
+
+    for (i = 0; i <= reg; i++)
+        ctx->mem[ctx->reg.i++] = ctx->reg.v[i];
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\t[I],\tV%X", reg);
+    return ERR_OK;
+}
+
+static int op_LD_Vx_addrI(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg = _X__(opcode);
+    uint8_t i;
+
+    for (i = 0; i <= reg; i++)
+        ctx->reg.v[i] = ctx->mem[ctx->reg.i++];
+    snprintf(ctx->last.opstr, OPSTRLEN, "LD\tV%X,\t[I]", reg);
+    return ERR_OK;
+}
+
+op_t ops[] = {{0x00EE, 0xFFFF, op_RET},
+              {0x1000, 0xF000, op_JP_addr},
+              {0x2000, 0xF000, op_CALL_addr},
+              {0x3000, 0xF000, op_SE_Vx_byte},
+              {0x4000, 0xF000, op_SNE_Vx_byte},
+              {0x5000, 0xF00F, op_SE_Vx_Vy},
+              {0x6000, 0xF000, op_LD_Vx_byte},
+              {0x7000, 0xF000, op_ADD_Vx_byte},
+              {0x8000, 0xF00F, op_LD_Vx_Vy},
+              {0x8001, 0xF00F, op_OR_Vx_Vy},
+              {0x8002, 0xF00F, op_AND_Vx_Vy},
+              {0x8003, 0xF00F, op_XOR_Vx_Vy},
+              {0x8004, 0xF00F, op_ADD_Vx_Vy},
+              {0x8005, 0xF00F, op_SUB_Vx_Vy},
+              {0x8006, 0xF00F, op_SHR_Vx_Vy},
+              {0x8007, 0xF00F, op_SUBN_Vx_Vy},
+              {0x800E, 0xF00F, op_SHL_Vx_Vy},
+              {0x9000, 0xF00F, op_SNE_Vx_Vy},
+              {0xA000, 0xF000, op_LD_I_addr},
+              {0xB000, 0xF000, op_JP_V0_addr},
+              {0xC000, 0xF000, op_RND_Vx_byte},
+
+              {0xF007, 0xF0FF, op_LD_Vx_DT},
+              //  { 0xF00A, 0xF0FF, op_LD_Vx_K},
+              {0xF015, 0xF0FF, op_LD_DT_Vx},
+              {0xF018, 0xF0FF, op_LD_ST_Vx},
+              {0xF01E, 0xF0FF, op_ADD_I_Vx},
+              {0xF029, 0xF0FF, op_LD_I_FONT_Vx},
+              {0xF033, 0xF0FF, op_LD_B_Vx},
+              {0xF055, 0xF0FF, op_LD_addrI_Vx},
+              {0xF065, 0xF0FF, op_LD_Vx_addrI}};
+
 
 c8_t *c8_create(void)
 {
-    c8_t *ctx;
-
-    ctx = calloc(sizeof(c8_t), 1);
+    c8_t *ctx = calloc(sizeof(c8_t), 1);
     if (ctx)
         return ctx;
     return NULL;
@@ -438,6 +496,7 @@ c8_t *c8_create(void)
 int c8_step(c8_t *ctx)
 {
     int ret = ERR_INVALID_OP;
+    unsigned int i;
     uint16_t opcode;
     uint16_t pc;
 
@@ -450,89 +509,11 @@ int c8_step(c8_t *ctx)
     ctx->last.pc = pc;
     ctx->last.opstr[0] = '\0';
 
-    switch (opcode & 0xF000)
+    for (i = 0; i < ARRAY_SIZE(ops); i++)
     {
-        case 0x0000:
+        if ((opcode & ops[i].mask) == ops[i].opcode)
         {
-            if (opcode == 0x00EE)
-            {
-                ret = op_RET(ctx, opcode);
-            }
-            break;
-        }
-        case 0x1000:
-        {
-            ret = op_JP_addr(ctx, opcode);
-            break;
-        }
-        case 0x2000:
-        {
-            ret = op_CALL_addr(ctx, opcode);
-            break;
-        }
-        case 0x3000:
-        {
-            ret = op_SE_Vx_byte(ctx, opcode);
-            break;
-        }
-        case 0x4000:
-        {
-            ret = op_SNE_Vx_byte(ctx, opcode);
-            break;
-        }
-        case 0x5000:
-        {
-            if ((opcode & 0xF) == 0)
-                ret = op_SE_Vx_Vy(ctx, opcode);
-            break;
-        }
-        case 0x6000:
-        {
-            ret = op_LD_Vx_byte(ctx, opcode);
-            break;
-        }
-        case 0x7000:
-        {
-            ret = op_ADD_Vx_byte(ctx, opcode);
-            break;
-        }
-        case 0x8000:
-        {
-            ret = op_OP_Vx_Vy(ctx, opcode);
-            break;
-        }
-        case 0x9000:
-        {
-            if ((opcode & 0xF) == 0)
-                ret = op_SNE_Vx_Vy(ctx, opcode);
-            break;
-        }
-        case 0xA000:
-        {
-            ret = op_LD_I_addr(ctx, opcode);
-            break;
-        }
-        case 0xB000:
-        {
-            ret = op_JP_V0_addr(ctx, opcode);
-            break;
-        }
-        case 0xC000:
-        {
-            /*
-             * Cxkk - RND Vx, byte
-             * Set Vx = random byte AND kk.
-             */
-            uint8_t reg = _X__(opcode);
-            uint8_t byte = __KK(opcode);
-            ctx->reg.v[reg] = rand() & byte;
-            snprintf(ctx->last.opstr, OPSTRLEN, "RND\tV%x,\t0x%X", reg, byte);
-            ret = ERR_OK;
-            break;
-        }
-        case 0xF000:
-        {
-            ret = op_Fxxx(ctx, opcode);
+            ret = ops[i].fn(ctx, opcode);
             break;
         }
     }
