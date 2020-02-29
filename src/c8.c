@@ -4,6 +4,7 @@
 #include <string.h>
 
 #define MEM_SIZE 0x1000
+#define LOAD_ADDR 0x200
 #define WIDTH 64
 #define HEIGHT 32
 #define OPSTRLEN 15
@@ -518,7 +519,7 @@ int c8_step(c8_t *ctx)
         }
     }
 
-    // ctx->flags = FLAG_TRACE;
+    ctx->flags = FLAG_TRACE;
     if (ctx->flags & FLAG_TRACE)
         fprintf(stderr, "%03x:\t%04x\t;\t%s\n", ctx->last.pc, ctx->last.op,
                 ctx->last.opstr);
@@ -547,6 +548,21 @@ int c8_load(c8_t *ctx, uint16_t address, uint8_t *data, uint16_t size)
         return ERR_OUT_OF_MEM;
     memcpy(&ctx->mem[address], data, size);
     return ERR_OK;
+}
+
+int c8_load_file(c8_t *ctx, const char *filename)
+{
+    FILE *file;
+    size_t nbytes;
+
+    file = fopen(filename, "rb");
+    if (!file)
+        return ERR_FILE_NOT_FOUND;
+
+    nbytes = fread(&ctx->mem[LOAD_ADDR], 1, MEM_SIZE -LOAD_ADDR, file);
+    fclose(file);
+    c8_set_pc(ctx, LOAD_ADDR);
+    return nbytes;
 }
 
 void c8_set_pc(c8_t *ctx, uint16_t pc)
