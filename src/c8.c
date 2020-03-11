@@ -1,4 +1,5 @@
 #include <c8.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +8,7 @@
 #define LOAD_ADDR 0x200
 #define WIDTH 64
 #define HEIGHT 32
-#define OPSTRLEN 15
+#define OPSTRLEN 31
 
 #define BIT(n) (1 << (n))
 #define FLAG_TRACE BIT(0)
@@ -18,6 +19,7 @@
 #define _X__(opcode) (((opcode) >> 8) & 0xF)
 #define __Y_(opcode) (((opcode) >> 4) & 0xF)
 #define __KK(opcode) ((opcode) & 0xFF)
+#define ___N(opcode) ((opcode) & 0xF)
 
 
 struct c8
@@ -55,6 +57,18 @@ typedef struct {
 
 #define ARRAY_SIZE(x) ((sizeof x) / (sizeof *x))
 
+
+/**
+ * 00E0 - CLS
+ * Clear the display.
+ */
+static int op_CLS(c8_t *ctx, uint16_t opcode)
+{
+    (void)opcode;
+    memset(ctx->disp, 0, WIDTH * HEIGHT);
+    snprintf(ctx->last.opstr, OPSTRLEN, "CLS");
+    return ERR_OK;
+}
 
 /**
  * 00EE - RET
@@ -366,6 +380,37 @@ static int op_RND_Vx_byte(c8_t *ctx, uint16_t opcode)
     return ERR_OK;
 }
 
+/**
+ * Dxyn - DRW Vx, Vy, nibble
+ * Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+ */
+static int op_DRW_Vx_Vy_n(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t x = _X__(opcode);
+    uint8_t y = __Y_(opcode);
+    uint8_t n = ___N(opcode);
+
+    uint8_t xcord = ctx->reg.v[x] & (WIDTH-1);
+    uint8_t ycord = ctx->reg.v[y] & (HEIGHT-1);
+    uint8_t _x, _y;
+
+    ctx->reg.v[0xF] = 0;
+    for (_y=0; _y<n; _y++) {
+        uint8_t data = ctx->mem[_y + ctx->reg.i];
+
+        for (_x = 0; _x < 8; _x++)
+        {
+            uint8_t value = (data >> (7 - _x)) & 1;
+            ctx->disp[_x + xcord][_y + ycord] ^= value;
+            if (value && !ctx->disp[_x + xcord][_y + ycord])
+                ctx->reg.v[0xF] = 1;
+        }
+    }
+
+    snprintf(ctx->last.opstr, OPSTRLEN, "DRW\tV%x,\tV%X,\t0x%X", x, y, n);
+    return ERR_OK;
+}
+
 static int op_LD_Vx_DT(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg = _X__(opcode);
@@ -453,7 +498,8 @@ static int op_LD_Vx_addrI(c8_t *ctx, uint16_t opcode)
     return ERR_OK;
 }
 
-op_t ops[] = {{0x00EE, 0xFFFF, op_RET},
+op_t ops[] = {{0x00E0, 0xFFFF, op_CLS},
+              {0x00EE, 0xFFFF, op_RET},
               {0x1000, 0xF000, op_JP_addr},
               {0x2000, 0xF000, op_CALL_addr},
               {0x3000, 0xF000, op_SE_Vx_byte},
@@ -474,7 +520,7 @@ op_t ops[] = {{0x00EE, 0xFFFF, op_RET},
               {0xA000, 0xF000, op_LD_I_addr},
               {0xB000, 0xF000, op_JP_V0_addr},
               {0xC000, 0xF000, op_RND_Vx_byte},
-
+              {0xD000, 0xF000, op_DRW_Vx_Vy_n},
               {0xF007, 0xF0FF, op_LD_Vx_DT},
               //  { 0xF00A, 0xF0FF, op_LD_Vx_K},
               {0xF015, 0xF0FF, op_LD_DT_Vx},
