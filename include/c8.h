@@ -12,6 +12,8 @@ extern "C" {
 #define ERR_INVALID_OP -1
 #define ERR_INFINIT_LOOP -2
 #define ERR_OUT_OF_MEM -3
+#define ERR_FILE_NOT_FOUND -4
+
 
 typedef struct c8 c8_t;
 
@@ -39,6 +41,12 @@ int c8_tick_60hz(c8_t *ctx);
  *
  */
 int c8_load(c8_t *ctx, uint16_t address, uint8_t *data, uint16_t size);
+
+/**
+ *
+ *
+ */
+int c8_load_file(c8_t *ctx, const char *filename);
 
 /**
  *
