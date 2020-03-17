@@ -679,3 +679,10 @@ void c8_debug_set_trace(c8_t *ctx, int trace)
     else
         ctx->flags &= ~FLAG_TRACE;
 }
+
+char *c8_debug_get_last(c8_t *ctx, uint16_t *op, uint16_t *pc)
+{
+    *op = ctx->last.op;
+    *pc = ctx->last.pc;
+    return ctx->last.opstr;
+}

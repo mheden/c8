@@ -85,6 +85,11 @@ void c8_debug_dump_state(c8_t *ctx);
  */
 void c8_debug_set_trace(c8_t *ctx, int trace);
 
+/**
+ *
+ *
+ */
+char *c8_debug_get_last(c8_t *ctx, uint16_t *op, uint16_t *pc);
 
 #ifdef __cplusplus
 }
