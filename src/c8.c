@@ -626,6 +626,11 @@ void c8_set_pc(c8_t *ctx, uint16_t pc)
     ctx->reg.pc = pc;
 }
 
+void c8_set_keys(c8_t *ctx, uint16_t keys)
+{
+    ctx->keys = keys;
+}
+
 void c8_debug_dump_memory(c8_t *ctx, uint16_t address, uint16_t length)
 {
     int i = 0;
