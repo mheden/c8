@@ -1,5 +1,5 @@
 CC = gcc
-CC_FLAGS = -Wall -Werror -Wextra -std=c99 -pedantic -O2
+CC_FLAGS = -Wall -Werror -Wextra -std=gnu99 -pedantic -O2
 CC_INCLUDE = -Iinclude
 
 AR = ar
@@ -34,8 +34,8 @@ test: $(TEST_BIN)
 $(LIB_BIN): $(LIB_OBJ)
 	$(AR) $(AR_FLAGS) $@ $^
 
-$(APP_BIN): $(APP_OBJ) $(LIB_BIN)
-	$(CC) -o $@ $^ $(LIB_BIN)
+$(APP_BIN): $(APP_SRC) $(LIB_BIN)
+	$(CC) $(CC_FLAGS) $(CC_INCLUDE) -o $@ $^ -lSDL2 -lrt
 
 $(TEST_BIN): $(TEST_OBJ)
 	$(CC) -o $@ $^
