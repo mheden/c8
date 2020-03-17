@@ -79,6 +79,13 @@ void c8_debug_dump_memory(c8_t *ctx, uint16_t address, uint16_t length);
  */
 void c8_debug_dump_state(c8_t *ctx);
 
+/**
+ *
+ *
+ */
+void c8_debug_set_trace(c8_t *ctx, int trace);
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -570,7 +570,6 @@ int c8_step(c8_t *ctx)
         }
     }
 
-    ctx->flags = FLAG_TRACE;
     if (ctx->flags & FLAG_TRACE)
         fprintf(stderr, "%03x:\t%04x\t;\t%s\n", ctx->last.pc, ctx->last.op,
                 ctx->last.opstr);
@@ -671,4 +670,12 @@ void c8_debug_dump_state(c8_t *ctx)
         fprintf(stderr, " %03X", ctx->stack[i]);
     }
     fprintf(stderr, "\n");
+}
+
+void c8_debug_set_trace(c8_t *ctx, int trace)
+{
+    if (trace > 0)
+        ctx->flags |= FLAG_TRACE;
+    else
+        ctx->flags &= ~FLAG_TRACE;
 }
