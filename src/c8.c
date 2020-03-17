@@ -549,23 +549,18 @@ int c8_step(c8_t *ctx)
 {
     int ret = ERR_INVALID_OP;
     unsigned int i;
-    uint16_t opcode;
-    uint16_t pc;
 
     /* fetch, decode and execute OP code */
-    pc = ctx->reg.pc;
-    opcode = (ctx->mem[pc] << 8) | (ctx->mem[pc + 1]);
-    ctx->reg.pc += 2;
-
-    ctx->last.op = opcode;
-    ctx->last.pc = pc;
+    ctx->last.pc = ctx->reg.pc;
+    ctx->last.op = (ctx->mem[ctx->reg.pc] << 8) | (ctx->mem[ctx->reg.pc + 1]);
     ctx->last.opstr[0] = '\0';
+    ctx->reg.pc += 2;
 
     for (i = 0; i < ARRAY_SIZE(ops); i++)
     {
-        if ((opcode & ops[i].mask) == ops[i].opcode)
+        if ((ctx->last.op & ops[i].mask) == ops[i].opcode)
         {
-            ret = ops[i].fn(ctx, opcode);
+            ret = ops[i].fn(ctx, ctx->last.op);
             break;
         }
     }
@@ -573,6 +568,10 @@ int c8_step(c8_t *ctx)
     if (ctx->flags & FLAG_TRACE)
         fprintf(stderr, "%03x:\t%04x\t;\t%s\n", ctx->last.pc, ctx->last.op,
                 ctx->last.opstr);
+
+    /* restore pc if needed */
+    if (ret == ERR_INVALID_OP)
+        ctx->reg.pc = ctx->last.pc;
 
     return ret;
 }
