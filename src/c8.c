@@ -14,6 +14,11 @@
 #define FLAG_TRACE BIT(0)
 
 
+/*
+ * TODO:
+ * - add font data
+ */
+
 /* helpers for extracting values from opcodes */
 #define _NNN(opcode) ((opcode) & 0xFFF)
 #define _X__(opcode) (((opcode) >> 8) & 0xF)
@@ -609,6 +614,13 @@ int c8_load_file(c8_t *ctx, const char *filename)
     fclose(file);
     c8_set_pc(ctx, LOAD_ADDR);
     return nbytes;
+}
+
+uint8_t c8_get_pixel(c8_t *ctx, uint8_t x, uint8_t y)
+{
+    if ((x >= WIDTH) || (y >= HEIGHT))
+        return 0;
+    return ctx->disp[x][y];
 }
 
 void c8_set_pc(c8_t *ctx, uint16_t pc)

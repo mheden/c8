@@ -10,6 +10,7 @@ extern "C" {
 #define ERR_SOUND_ON 1
 #define ERR_OK 0
 #define ERR_INVALID_OP -1
+// TODO: remove
 #define ERR_INFINIT_LOOP -2
 #define ERR_OUT_OF_MEM -3
 #define ERR_FILE_NOT_FOUND -4
@@ -52,6 +53,12 @@ int c8_load_file(c8_t *ctx, const char *filename);
  *
  *
  */
+uint8_t c8_get_pixel(c8_t *ctx, uint8_t x, uint8_t y);
+
+/**
+ *
+ *
+ */
 void c8_set_pc(c8_t *ctx, uint16_t pc);
 
 /**
@@ -59,18 +66,6 @@ void c8_set_pc(c8_t *ctx, uint16_t pc);
  *
  */
 void c8_set_keys(c8_t *ctx, uint16_t keys);
-
-/**
- *
- *
- */
-int c8_redraw_needed(c8_t *ctx);
-
-/**
- *
- *
- */
-void c8_redraw_ack(c8_t *ctx);
 
 /**
  *
