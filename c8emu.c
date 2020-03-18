@@ -57,6 +57,7 @@ int main(int argc, char **argv)
     uint64_t nextvsync;
     char window_title[256] = "\0";
     int trace = 0;
+    uint16_t keys = 0;
 
     if (argc != 2)
     {
@@ -88,7 +89,6 @@ int main(int argc, char **argv)
     {
         int i;
         SDL_Event event;
-        uint16_t keys = 0;
 
         for (i = 0; i < CLOCKSPEED_480Hz; i++)
         {
@@ -135,9 +135,30 @@ int main(int argc, char **argv)
                         goto end;
                         break;
                 }
-                c8_set_keys(ctx, keys);
+                break;
+            case SDL_KEYUP:
+                switch (event.key.keysym.sym)
+                {
+                    case SDLK_1:    keys &= ~BIT(0);     break;
+                    case SDLK_2:    keys &= ~BIT(1);     break;
+                    case SDLK_3:    keys &= ~BIT(2);     break;
+                    case SDLK_4:    keys &= ~BIT(3);     break;
+                    case SDLK_q:    keys &= ~BIT(4);     break;
+                    case SDLK_w:    keys &= ~BIT(5);     break;
+                    case SDLK_e:    keys &= ~BIT(6);     break;
+                    case SDLK_r:    keys &= ~BIT(7);     break;
+                    case SDLK_a:    keys &= ~BIT(8);     break;
+                    case SDLK_s:    keys &= ~BIT(9);     break;
+                    case SDLK_d:    keys &= ~BIT(10);    break;
+                    case SDLK_f:    keys &= ~BIT(11);    break;
+                    case SDLK_z:    keys &= ~BIT(12);    break;
+                    case SDLK_x:    keys &= ~BIT(13);    break;
+                    case SDLK_c:    keys &= ~BIT(14);    break;
+                    case SDLK_v:    keys &= ~BIT(15);    break;
+                }
                 break;
         }
+        c8_set_keys(ctx, keys);
 
         /* wait for vertical sync (60 Hz) */
         do
