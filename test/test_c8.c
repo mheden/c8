@@ -4,7 +4,6 @@
 /* we want the access internal structures */
 #include "../src/c8.c"
 
-#define ARRAY_SIZE(x) ((sizeof x) / (sizeof *x))
 
 static void test_load()
 {
@@ -42,6 +41,7 @@ static void test_op_invalid()
     TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
 
     TEST_ASSERT_EQUAL(ERR_INVALID_OP, c8_step(ctx));
+    TEST_ASSERT_EQUAL(0, ctx->reg.pc);
 }
 
 
@@ -79,20 +79,20 @@ void test_op_skip()
             0x32, 0x10, //  004: SE V2, 0x10
             0x00, 0x00, //  006: should not be executed
             0x42, 0xab, //  008: SNE V2, 0xab
-            0x00, 0x00, //  010: should not be executed
-            0x42, 0x10, //  012: SNE V2, 0x10
+            0x00, 0x00, //  00a: should not be executed
+            0x42, 0x10, //  00c: SNE V2, 0x10
 
-            0x62, 0x10, //  014: LD V2, 0x10
-            0x63, 0xab, //  016: LD V3, 0xab
-            0x52, 0x30, //  018: SE V2, V3
+            0x62, 0x10, //  00e: LD V2, 0x10
+            0x63, 0xab, //  010: LD V3, 0xab
+            0x52, 0x30, //  012: SE V2, V3
+            0x63, 0x10, //  014: LD V3, 0x10
+            0x52, 0x30, //  016: SE V2, V3
+            0x00, 0x00, //  018: should not be executed
+            0x63, 0xab, //  01a: LD V3, 0xab
+            0x92, 0x30, //  01c: SNE V2, V3
+            0x00, 0x00, //  01e: should not be executed
             0x63, 0x10, //  020: LD V3, 0x10
-            0x52, 0x30, //  022: SE V2, V3
-            0x00, 0x00, //  024: should not be executed
-            0x63, 0xab, //  026: LD V3, 0xab
-            0x92, 0x30, //  028: SNE V2, V3
-            0x00, 0x00, //  030: should not be executed
-            0x63, 0x10, //  032: LD V3, 0x10
-            0x92, 0x30, //  034: SNE V2, V3
+            0x92, 0x30, //  022: SNE V2, V3
     };
 
     ctx = c8_create();
@@ -552,6 +552,30 @@ static void test_op_Fxxx_misc()
     TEST_ASSERT_EQUAL(5, ctx->mem[0x105]);
 }
 
+static void test_op_SKNP_Vx()
+{
+    c8_t *ctx;
+    uint8_t code[] = {
+            0x60, 0x02, // 000: LD V0, 2
+            0xE0, 0xA1, // 002: SKNP V0
+    };
+
+    ctx = c8_create();
+    TEST_ASSERT_NOT_NULL(ctx);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
+
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    c8_set_keys(ctx, BIT(0));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(6, ctx->reg.pc);
+
+    c8_set_pc(ctx, 2);
+    c8_set_keys(ctx, BIT(2));
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(4, ctx->reg.pc);
+}
+
+
 int main(int argc, char **argv)
 {
     (void)argc;
@@ -571,6 +595,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_op_Fxxx_timers);
     RUN_TEST(test_op_Fxxx_push_pop);
     RUN_TEST(test_op_Fxxx_misc);
+    RUN_TEST(test_op_SKNP_Vx);
     UnityEnd();
 
     return 0;
