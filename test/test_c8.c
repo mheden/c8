@@ -552,19 +552,21 @@ static void test_op_Fxxx_misc()
     TEST_ASSERT_EQUAL(5, ctx->mem[0x105]);
 }
 
-static void test_op_SKNP_Vx()
+static void test_op_keyboard()
 {
     c8_t *ctx;
     uint8_t code[] = {
             0x60, 0x02, // 000: LD V0, 2
             0xE0, 0xA1, // 002: SKNP V0
+            0xE0, 0x9E, // 004: SKP V0
     };
 
     ctx = c8_create();
     TEST_ASSERT_NOT_NULL(ctx);
     TEST_ASSERT_EQUAL(ERR_OK, c8_load(ctx, 0, code, sizeof(code)));
-
     TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+
+    /* SKNP */
     c8_set_keys(ctx, BIT(0));
     TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
     TEST_ASSERT_EQUAL(6, ctx->reg.pc);
@@ -573,6 +575,17 @@ static void test_op_SKNP_Vx()
     c8_set_keys(ctx, BIT(2));
     TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
     TEST_ASSERT_EQUAL(4, ctx->reg.pc);
+
+    /* SKP */
+    c8_set_keys(ctx, 0);
+    c8_set_pc(ctx, 4);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(6, ctx->reg.pc);
+
+    c8_set_keys(ctx, BIT(2));
+    c8_set_pc(ctx, 4);
+    TEST_ASSERT_EQUAL(ERR_OK, c8_step(ctx));
+    TEST_ASSERT_EQUAL(8, ctx->reg.pc);
 }
 
 
@@ -595,7 +608,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_op_Fxxx_timers);
     RUN_TEST(test_op_Fxxx_push_pop);
     RUN_TEST(test_op_Fxxx_misc);
-    RUN_TEST(test_op_SKNP_Vx);
+    RUN_TEST(test_op_keyboard);
     UnityEnd();
 
     return 0;

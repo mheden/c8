@@ -428,6 +428,18 @@ static int op_SKNP_Vx(c8_t *ctx, uint16_t opcode)
     return ERR_OK;
 }
 
+static int op_SKP_Vx(c8_t *ctx, uint16_t opcode)
+{
+    uint8_t reg = _X__(opcode);
+
+    if (ctx->reg.v[reg] < 16)
+        if (ctx->keys & BIT(ctx->reg.v[reg]))
+            ctx->reg.pc += 2;
+
+    snprintf(ctx->last.opstr, OPSTRLEN, "SKP\tV%X", reg);
+    return ERR_OK;
+}
+
 static int op_LD_Vx_DT(c8_t *ctx, uint16_t opcode)
 {
     uint8_t reg = _X__(opcode);
@@ -538,6 +550,7 @@ op_t ops[] = {{0x00E0, 0xFFFF, op_CLS},
               {0xB000, 0xF000, op_JP_V0_addr},
               {0xC000, 0xF000, op_RND_Vx_byte},
               {0xD000, 0xF000, op_DRW_Vx_Vy_n},
+              {0xE09E, 0xF0FF, op_SKP_Vx},
               {0xE0A1, 0xF0FF, op_SKNP_Vx},
               {0xF007, 0xF0FF, op_LD_Vx_DT},
               //  { 0xF00A, 0xF0FF, op_LD_Vx_K},
