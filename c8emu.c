@@ -30,7 +30,7 @@ enum
 #define HEIGHT 64
 #else
 #define TITLE "%s: %s"
-#define SCALE 1
+#define SCALE 8
 #define WIDTH 64
 #define HEIGHT 32
 #endif
@@ -52,12 +52,13 @@ int main(int argc, char **argv)
     SDL_Window *window = NULL;
     SDL_Renderer *renderer = NULL;
     SDL_Texture *texture = NULL;
-    uint32_t *display = NULL;
+    uint32_t *framebuffer = NULL;
     c8_t *ctx = NULL;
     uint64_t nextvsync;
     char window_title[256] = "\0";
     int trace = 0;
     uint16_t keys = 0;
+    SDL_Rect display = {.x = 0, .y = 0, .w = WIDTH * SCALE, .h = HEIGHT * SCALE};
 
     if (argc != 2)
     {
@@ -81,8 +82,8 @@ int main(int argc, char **argv)
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
                                 SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
 
-    display = malloc(SCALE * WIDTH * HEIGHT * sizeof(uint32_t));
-    memset(display, 0, SCALE * WIDTH * HEIGHT * sizeof(uint32_t));
+    framebuffer = malloc(WIDTH * HEIGHT * sizeof(uint32_t));
+    memset(framebuffer, 0, WIDTH * HEIGHT * sizeof(uint32_t));
 
     nextvsync = get_us();
     while (6 != 9)
@@ -169,40 +170,23 @@ int main(int argc, char **argv)
         c8_tick_60hz(ctx);
         nextvsync += 16667;
 
-        int x, y, s;
+        int x, y;
         for (y = 0; y < HEIGHT; y++)
-        {
             for (x = 0; x < WIDTH; x++)
-            {
-                // printf("--- %d, %d\n", x, y);
                 if (c8_get_pixel(ctx, x, y))
-                {
-                    // set_pixel(display, x, y, COLOR);
-                    for (s = 0; s < SCALE; s++)
-                    {
-                        display[y * WIDTH * SCALE + x + s] = COLOR;
-                    }
-                }
+                    framebuffer[y * WIDTH + x] = COLOR;
                 else
-                {
-                    // set_pixel(display, x, y, 0);
-                    for (s = 0; s < SCALE; s++)
-                    {
-                        display[y * WIDTH * SCALE + x + s] = 0x00000000;
-                    }
-                }
-            }
-        }
+                    framebuffer[y * WIDTH + x] = 0x0;
 
-        SDL_UpdateTexture(texture, NULL, display, WIDTH * sizeof(uint32_t));
+        SDL_UpdateTexture(texture, NULL, framebuffer, WIDTH * sizeof(uint32_t));
         SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, NULL, NULL);
+        SDL_RenderCopy(renderer, texture, NULL, &display);
         SDL_RenderPresent(renderer);
     }
 
 end:
-    if (display)
-        free(display);
+    if (framebuffer)
+        free(framebuffer);
     if (texture)
         SDL_DestroyTexture(texture);
     if (renderer)
