@@ -721,6 +721,31 @@ void c8_debug_dump_state(c8_t *ctx)
     fprintf(stderr, "\n");
 }
 
+void c8_debug_dump_display(c8_t *ctx)
+{
+    int x, y;
+
+    fprintf(stderr, "  ");
+    for (x = 0; x < WIDTH; x++)
+        fprintf(stderr, "%c", x % 10 == 0 ? '0' + x / 10 : ' ');
+    fprintf(stderr, "\n");
+
+    fprintf(stderr, "  ");
+    for (x = 0; x < WIDTH; x++)
+        fprintf(stderr, "%d", x % 10);
+    fprintf(stderr, "\n");
+
+    for (y = 0; y < HEIGHT; y++)
+    {
+        fprintf(stderr, "%2d", y);
+        for (x = 0; x < WIDTH; x++)
+        {
+            fprintf(stderr, "%c", ctx->disp[x][y] ? 'x' : ' ');
+        }
+        fprintf(stderr, "\n");
+    }
+}
+
 void c8_debug_set_trace(c8_t *ctx, int trace)
 {
     if (trace > 0)

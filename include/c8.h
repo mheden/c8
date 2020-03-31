@@ -83,6 +83,12 @@ void c8_debug_dump_state(c8_t *ctx);
  *
  *
  */
+void c8_debug_dump_display(c8_t *ctx);
+
+/**
+ *
+ *
+ */
 void c8_debug_set_trace(c8_t *ctx, int trace);
 
 /**
