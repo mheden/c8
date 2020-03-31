@@ -110,23 +110,29 @@ int main(int argc, char **argv)
                 goto end;
                 break;
             case SDL_KEYDOWN:
+                /*
+                    |1|2|3|C|  =>  |1|2|3|4|
+                    |4|5|6|D|  =>  |Q|W|E|R|
+                    |7|8|9|E|  =>  |A|S|D|F|
+                    |A|0|B|F|  =>  |Z|X|C|V|
+                */
                 switch (event.key.keysym.sym)
                 {
-                    case SDLK_1:    keys |= BIT(0);     break;
-                    case SDLK_2:    keys |= BIT(1);     break;
-                    case SDLK_3:    keys |= BIT(2);     break;
-                    case SDLK_4:    keys |= BIT(3);     break;
+                    case SDLK_x:    keys |= BIT(0);     break;
+                    case SDLK_1:    keys |= BIT(1);     break;
+                    case SDLK_2:    keys |= BIT(2);     break;
+                    case SDLK_3:    keys |= BIT(3);     break;
                     case SDLK_q:    keys |= BIT(4);     break;
                     case SDLK_w:    keys |= BIT(5);     break;
                     case SDLK_e:    keys |= BIT(6);     break;
-                    case SDLK_r:    keys |= BIT(7);     break;
-                    case SDLK_a:    keys |= BIT(8);     break;
-                    case SDLK_s:    keys |= BIT(9);     break;
-                    case SDLK_d:    keys |= BIT(10);    break;
-                    case SDLK_f:    keys |= BIT(11);    break;
-                    case SDLK_z:    keys |= BIT(12);    break;
-                    case SDLK_x:    keys |= BIT(13);    break;
-                    case SDLK_c:    keys |= BIT(14);    break;
+                    case SDLK_a:    keys |= BIT(7);     break;
+                    case SDLK_s:    keys |= BIT(8);     break;
+                    case SDLK_d:    keys |= BIT(9);     break;
+                    case SDLK_z:    keys |= BIT(10);    break;
+                    case SDLK_c:    keys |= BIT(11);    break;
+                    case SDLK_4:    keys |= BIT(12);    break;
+                    case SDLK_r:    keys |= BIT(13);    break;
+                    case SDLK_f:    keys |= BIT(14);    break;
                     case SDLK_v:    keys |= BIT(15);    break;
                     case SDLK_PERIOD:
                         trace = (trace + 1) & 1;
@@ -140,21 +146,21 @@ int main(int argc, char **argv)
             case SDL_KEYUP:
                 switch (event.key.keysym.sym)
                 {
-                    case SDLK_1:    keys &= ~BIT(0);     break;
-                    case SDLK_2:    keys &= ~BIT(1);     break;
-                    case SDLK_3:    keys &= ~BIT(2);     break;
-                    case SDLK_4:    keys &= ~BIT(3);     break;
+                    case SDLK_x:    keys &= ~BIT(0);     break;
+                    case SDLK_1:    keys &= ~BIT(1);     break;
+                    case SDLK_2:    keys &= ~BIT(2);     break;
+                    case SDLK_3:    keys &= ~BIT(3);     break;
                     case SDLK_q:    keys &= ~BIT(4);     break;
                     case SDLK_w:    keys &= ~BIT(5);     break;
                     case SDLK_e:    keys &= ~BIT(6);     break;
-                    case SDLK_r:    keys &= ~BIT(7);     break;
-                    case SDLK_a:    keys &= ~BIT(8);     break;
-                    case SDLK_s:    keys &= ~BIT(9);     break;
-                    case SDLK_d:    keys &= ~BIT(10);    break;
-                    case SDLK_f:    keys &= ~BIT(11);    break;
-                    case SDLK_z:    keys &= ~BIT(12);    break;
-                    case SDLK_x:    keys &= ~BIT(13);    break;
-                    case SDLK_c:    keys &= ~BIT(14);    break;
+                    case SDLK_a:    keys &= ~BIT(7);     break;
+                    case SDLK_s:    keys &= ~BIT(8);     break;
+                    case SDLK_d:    keys &= ~BIT(9);     break;
+                    case SDLK_z:    keys &= ~BIT(10);    break;
+                    case SDLK_c:    keys &= ~BIT(11);    break;
+                    case SDLK_4:    keys &= ~BIT(12);    break;
+                    case SDLK_r:    keys &= ~BIT(13);    break;
+                    case SDLK_f:    keys &= ~BIT(14);    break;
                     case SDLK_v:    keys &= ~BIT(15);    break;
                 }
                 break;
